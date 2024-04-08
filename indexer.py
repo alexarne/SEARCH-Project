@@ -5,20 +5,21 @@ import sys
 
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_LIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
-NUM_LIST_PAGES = 5
+NUM_LIST_PAGES = 10
 ELASTIC_INSERT_URL = "https://localhost:9200/"
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        tasks = [asyncio.ensure_future(indexBookList(pageNumber, session)) for pageNumber in range(1, NUM_LIST_PAGES+1)]
         updateProgress()
+        tasks = [asyncio.ensure_future(indexBookList(pageNumber, session)) for pageNumber in range(1, NUM_LIST_PAGES+1)]
         await asyncio.gather(*tasks)
         print()
         global numErrors
         print(f"Non-existing books: {numErrors}")
-    # getBookData("https://www.goodreads.com/book/show/2767052-the-hunger-games")
-    # getBookData("https://www.goodreads.com/book/show/1885.Pride_and_Prejudice")
-    # getBookData("https://www.goodreads.com/book/show/12067.Good_Omens?from_search=true&from_srp=true&qid=AYPzlLhVGU&rank=1")
+        # await indexBook("https://www.goodreads.com/book/show/135836.Trainspotting", session)
+    # indexBook("https://www.goodreads.com/book/show/2767052-the-hunger-games")
+    # indexBook("https://www.goodreads.com/book/show/1885.Pride_and_Prejudice")
+    # indexBook("https://www.goodreads.com/book/show/12067.Good_Omens?from_search=true&from_srp=true&qid=AYPzlLhVGU&rank=1")
 
 async def indexBookList(pageNumber, session):
     URLs = await getBookURLs(pageNumber, session)
@@ -39,12 +40,13 @@ async def indexBook(URL, session):
     # print(f"Indexing book {URL}")
     page = await fetch(session, URL)
     soup = BeautifulSoup(page, "html.parser")
+    # print(soup.prettify())
     result = {}
 
     # Isolate metadata
     mainContent = soup.find("div", class_="BookPage__mainContent")
     if mainContent is None:
-        print(f"error {URL}")
+        print(f"\rERROR: Book not found: {URL}")
         updateErrors()
         return
 
@@ -87,14 +89,17 @@ async def fetch(session, url):
     status = 404
     attempts = 0
     while status != 200 and attempts < 5:
-        async with session.get(url) as response:
-            text = await response.text()
-            status = response.status
-            if status == 200:
-                return text
-            attempts += 1
-            # print(f"RETRY FETCH: {status} on {url}")
-    print(f"FATAL: Fetch failed after multiple attempts on {url}")
+        try:
+            async with session.get(url) as response:
+                text = await response.text()
+                status = response.status
+                if status == 200:
+                    return text
+                attempts += 1
+                print(f"\rRETRY FETCH: {status} on {url}")
+        except:
+            print(f"\rRETRY FETCH: Fetch threw exception on {url}")
+    print(f"\rFATAL: Fetch failed after multiple attempts on {url}")
 
 numIndexedBooks = -1
 numErrors = 0
