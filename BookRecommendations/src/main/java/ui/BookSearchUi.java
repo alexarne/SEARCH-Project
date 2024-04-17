@@ -1,17 +1,25 @@
-package BookSearchUi;
+package ui;
+
+import book.Book;
+import io.github.cdimascio.dotenv.Dotenv;
+import searcher.BookSearcher;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.awt.print.Book;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
-
+import java.util.List;
+import java.util.Map;
 
 public class BookSearchUi extends JFrame {
     public JPanel resultWindow = new JPanel();
@@ -30,22 +38,23 @@ public class BookSearchUi extends JFrame {
     JRadioButtonMenuItem rankedItem = new JRadioButtonMenuItem( "Ranked retrieval" );
     private Font font = new Font( "Arial", Font.BOLD, 16 );
 
-
-
-    BookObject[] currentResultList = null;
-
-    String emptyStarIconFile = "BooksearchUi/starempty.png";
-    String fullStarIconFile = "BooksearchUi/starfull.png";
-    String logoFile = "BooksearchUi/logo.png";
+    String emptyStarIconFile = "./images/starempty.png";
+    String fullStarIconFile = "./images/starfull.png";
+    String logoFile = "./images/logo.png";
 
     BufferedImage emptyStar;
     BufferedImage fullStar;
+    BookSearcher searcher;
 
-    public BookSearchUi(){
+    List<Book> currentResultList;
+
+    public BookSearchUi() {
         init();
     }
 
-    void init(){
+    void init() {
+        Dotenv dotenv = Dotenv.configure().load();
+        searcher = new BookSearcher("localhost", 9200, dotenv.get("ES_FINGERPRINT"), dotenv.get("ES_PASSWORD"), dotenv.get("ES_INDEX"));
         try {
             emptyStar = ImageIO.read(new File(emptyStarIconFile));
             fullStar = ImageIO.read(new File(fullStarIconFile));
@@ -89,15 +98,21 @@ public class BookSearchUi extends JFrame {
         docTextView.setWrapStyleWord(true);
         p.add(docViewPane);
 
-
         this.add(p);
         setVisible( true );
 
-        Action test = new AbstractAction() {
+        Action test = new AbstractAction(){
             @Override
             public void actionPerformed(ActionEvent e) {
-                //docTextView.setText("Test performed: " + queryWindow.getText());
-                displayResults();
+                try {
+                    long startTime = System.currentTimeMillis();
+                    currentResultList = searcher.searchBooks(queryWindow.getText().toLowerCase().trim());
+                    long elapsedTime = System.currentTimeMillis() - startTime;
+                    displayResults(elapsedTime/1000.0);
+                } catch (
+                        IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         };
         queryWindow.registerKeyboardAction( test,
@@ -123,15 +138,12 @@ public class BookSearchUi extends JFrame {
         repaint();
     }
 
-
-
-
-    void displayResults() {
+    void displayResults(double elapsedTime) {
         resultWindow.removeAll();
         int maxResultsToDisplay = 10;
+        displayInfoText( String.format( "Found %d book(s) in %.3f seconds", currentResultList.size(), elapsedTime ));
         int i;
-        for ( i=0; i<currentResultList.length && i<maxResultsToDisplay; i++ ) {
-
+        for (i=0; i<currentResultList.size() && i<maxResultsToDisplay; i++ ) {
             JPanel bookToShow = new JPanel();
             bookToShow.setAlignmentX(Component.LEFT_ALIGNMENT);
             //bookToShow.setLayout(new BoxLayout(bookToShow, BoxLayout.X_AXIS));
@@ -140,17 +152,11 @@ public class BookSearchUi extends JFrame {
 
             DecimalFormat f = new DecimalFormat("##.00");
 
-            BookDisplayLabel titleLabel = new BookDisplayLabel(currentResultList[i], currentResultList[i].getTitle());
-            BookDisplayLabel authorLabel = new BookDisplayLabel(currentResultList[i], currentResultList[i].getAuthor());
-            BookDisplayLabel yearLabel = new BookDisplayLabel(currentResultList[i], Integer.toString(currentResultList[i].getYear()));
-            BookDisplayLabel publicScoreLabel = new BookDisplayLabel(currentResultList[i], f.format(currentResultList[i].getPublicScore()) + "/5");
+            BookDisplayLabel titleLabel = new BookDisplayLabel(currentResultList.get(i), currentResultList.get(i).getTitle());
+            BookDisplayLabel authorLabel = new BookDisplayLabel(currentResultList.get(i), currentResultList.get(i).getAuthor());
+            BookDisplayLabel ratingLabel = new BookDisplayLabel(currentResultList.get(i), f.format(currentResultList.get(i).getRating()) + "/5");
             JCheckBox readBox = new JCheckBox();
-            if(currentResultList[i].getMyScore() == -1){
-                readBox.setSelected(false);
-            }
-            else{
-                readBox.setSelected(true);
-            }
+            readBox.setSelected(currentResultList.get(i).getMyScore() != -1);
 
             JCheckBox[] starBoxes = new JCheckBox[5];
 
@@ -159,47 +165,35 @@ public class BookSearchUi extends JFrame {
                 starBoxes[j].setSelectedIcon(new ImageIcon(fullStar));
                 starBoxes[j].setIcon(new ImageIcon(emptyStar));
                 starBoxes[j].setPreferredSize(new Dimension(20,20));
-                if (currentResultList[i].getMyScore() >=j){
-                    starBoxes[j].setSelected(true);
-                }
-                else{
-                    starBoxes[j].setSelected(false);
-                }
+                starBoxes[j].setSelected(currentResultList.get(i).getMyScore() >= j);
             }
-
 
             titleLabel.setPreferredSize(new Dimension(200, 20));
             authorLabel.setPreferredSize(new Dimension(150, 20));
-            yearLabel.setPreferredSize(new Dimension(50, 20));
-            publicScoreLabel.setPreferredSize(new Dimension(50, 20));
+            ratingLabel.setPreferredSize(new Dimension(50, 20));
 
             titleLabel.setFont( font );
             authorLabel.setFont( font );
-            yearLabel.setFont( font );
-            publicScoreLabel.setFont( font );
+            ratingLabel.setFont( font );
 
             MouseAdapter showDocument = new MouseAdapter() {
                 public void mouseClicked(MouseEvent e) {
                     String abstr = ((BookDisplayLabel)e.getSource()).origin.getAbstr();
-
                     docTextView.setText(abstr);
                     docTextView.setCaretPosition(0);
                 }
             };
             titleLabel.addMouseListener(showDocument);
             authorLabel.addMouseListener(showDocument);
-            yearLabel.addMouseListener(showDocument);
-            publicScoreLabel.addMouseListener(showDocument);
+            ratingLabel.addMouseListener(showDocument);
             bookToShow.add(titleLabel);
             bookToShow.add(authorLabel);
-            bookToShow.add(yearLabel);
-            bookToShow.add(publicScoreLabel);
+            bookToShow.add(ratingLabel);
             bookToShow.add(readBox);
 
-            for (int j = 0; j < starBoxes.length; j++) {
-                bookToShow.add(starBoxes[j]);
+            for (JCheckBox starBox : starBoxes) {
+                bookToShow.add(starBox);
             }
-
             resultWindow.add(bookToShow);
         }
 
@@ -207,14 +201,7 @@ public class BookSearchUi extends JFrame {
         repaint();
     };
 
-    public static void main( String[] args ) {
+    public static void main( String[] args ) throws IOException {
         BookSearchUi bookSearchUi = new BookSearchUi();
-        bookSearchUi.currentResultList = new BookObject[2];
-        bookSearchUi.currentResultList[0] = new BookObject("Fellowship of the Ring", "J.R.R. Tolkien", "In ancient times the Rings of Power were crafted by the Elven-smiths, and Sauron, the Dark Lord, forged the One Ring, filling it with his own power so that he could rule all others. But the One Ring was taken from him, and though he sought it throughout Middle-earth, it remained lost to him. After many ages it fell into the hands of Bilbo Baggins, as told in The Hobbit.\n" +
-                "\n" +
-                "In a sleepy village in the Shire, young Frodo Baggins finds himself faced with an immense task, as his elderly cousin Bilbo entrusts the Ring to his care. Frodo must leave his home and make a perilous journey across Middle-earth to the Cracks of Doom, there to destroy the Ring and foil the Dark Lord in his evil purpose.", 1954, 4.8D);
-        bookSearchUi.currentResultList[1] = new BookObject("The Hobbit", "J.R.R. Tolkien", "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.\n" +
-                "Written for J.R.R. Tolkien’s own children, The Hobbit met with instant critical acclaim when it was first published in 1937. Now recognized as a timeless classic, this introduction to the hobbit Bilbo Baggins, the wizard Gandalf, Gollum, and the spectacular world of Middle-earth recounts of the adventures of a reluctant hero, a powerful and dangerous ring, and the cruel dragon Smaug the Magnificent. The text in this 372-page paperback edition is based on that first published in Great Britain by Collins Modern Classics (1998), and includes a note on the text by Douglas A. Anderson (2001).", 1937, 4.456453453);
-
     }
 }

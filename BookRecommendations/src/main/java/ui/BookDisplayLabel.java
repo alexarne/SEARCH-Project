@@ -1,15 +1,15 @@
-package BookSearchUi;
+package ui;
 
 import javax.swing.*;
 
 public class BookDisplayLabel extends JLabel {
-    public BookObject origin;
-    public BookDisplayLabel(BookObject book){
+    public book.Book origin;
+    public BookDisplayLabel(book.Book book){
         super();
         origin = book;
     }
 
-    public BookDisplayLabel(BookObject book, String text){
+    public BookDisplayLabel(book.Book book, String text){
         super(text);
         origin = book;
     }
