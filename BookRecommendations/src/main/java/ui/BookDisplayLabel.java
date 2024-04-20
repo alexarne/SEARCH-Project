@@ -3,13 +3,13 @@ package ui;
 import javax.swing.*;
 
 public class BookDisplayLabel extends JLabel {
-    public book.Book origin;
-    public BookDisplayLabel(book.Book book){
+    public components.Book origin;
+    public BookDisplayLabel(components.Book book){
         super();
         origin = book;
     }
 
-    public BookDisplayLabel(book.Book book, String text){
+    public BookDisplayLabel(components.Book book, String text){
         super(text);
         origin = book;
     }

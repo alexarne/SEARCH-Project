@@ -64,8 +64,17 @@ async def indexBooks():
         tasks = [asyncio.ensure_future(indexBookList(pageNumber, session)) for pageNumber in range(1, NUM_LIST_PAGES+1)]
         await asyncio.gather(*tasks)
         print()
+<<<<<<< HEAD
         global numErrorBooks
         print(f"Non-existing books: {numErrorBooks}")
+=======
+        global numErrors
+        print(f"Non-existing books: {numErrors}")
+        # await indexBook("https://www.goodreads.com/components/show/135836.Trainspotting", session)
+    # indexBook("https://www.goodreads.com/components/show/2767052-the-hunger-games")
+    # indexBook("https://www.goodreads.com/components/show/1885.Pride_and_Prejudice")
+    # indexBook("https://www.goodreads.com/components/show/12067.Good_Omens?from_search=true&from_srp=true&qid=AYPzlLhVGU&rank=1")
+>>>>>>> 3864739 (update gui/searcher to support user profile)
 
 async def indexBookList(pageNumber, session):
     URLs = await getBookURLs(pageNumber, session)
@@ -83,7 +92,7 @@ async def getBookURLs(pageNumber, session):
     return URLs
 
 async def indexBook(URL, session):
-    # print(f"Indexing book {URL}")
+    # print(f"Indexing components {URL}")
     page = await fetch(session, URL)
     soup = BeautifulSoup(page, "html.parser")
     # print(soup.prettify())
@@ -107,7 +116,7 @@ async def indexBook(URL, session):
         br.replace_with("\n")
     result["abstr"] = abstract.text
 
-    # Get author (assuming just one, reason: https://www.goodreads.com/book/show/7190.The_Three_Musketeers)
+    # Get author (assuming just one, reason: https://www.goodreads.com/components/show/7190.The_Three_Musketeers)
     authorSection = mainContent.find("div", class_="BookPageMetadataSection__contributor")
     author = authorSection.find("span", class_="ContributorLink__name")
     result["author"] = author.text
@@ -128,11 +137,17 @@ async def indexBook(URL, session):
     addBookToIndex(result)
 
 def addBookToIndex(data):
+    data["id"] = numIndexedBooks
     client.index(index=getenv("ES_INDEX"),
              id=numIndexedBooks,
              document=data)
+<<<<<<< HEAD
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
+=======
+    # print("Indexed components " + data["title"] + " by " + data["author"])
+    updateProgress()
+>>>>>>> 3864739 (update gui/searcher to support user profile)
 
 async def fetch(session, url):
     status = 404
