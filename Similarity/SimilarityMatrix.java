@@ -1,6 +1,6 @@
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Author: Erik Lidbjörk.
@@ -8,17 +8,19 @@ import java.util.Map;
  * 
  * Matrix where rows and columns are represented by user id's.
  * Entries are similarity scores between each user from a 
- * Collection of users computed from a Similarity.
+ * Set of users computed from a Similarity.
  */
 public class SimilarityMatrix implements Similarity {
     /* Store similarity scores. */
     private Map<Integer,Map<Integer,Double>> userToUserSimilarity = new HashMap<>();
+    private Set<Integer> user_ids;
 
     /** 
      * Precompute similarities and store in RAM. 
      */
-    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids, boolean similarityIsSymmetric) {
+    SimilarityMatrix(Similarity similarity, Set<Integer> user_ids, boolean similarityIsSymmetric) {
         /* Iterate over every user in rating matrix. */
+        this.user_ids = user_ids;
         for (var user_id_A : user_ids) {
             userToUserSimilarity.put(user_id_A, new HashMap<>());
             for (var user_id_B : user_ids) {
@@ -34,8 +36,18 @@ public class SimilarityMatrix implements Similarity {
         }
     }
 
-    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids) {
+    /**
+     * Metrics are assumed to be symmetric * if not specified. 
+     */
+    SimilarityMatrix(Similarity similarity, Set<Integer> user_ids) {
         this(similarity, user_ids, true);
+    }
+
+    /**
+     * Return set of all user id's.
+     */
+    public Set<Integer> getUserIds() {
+        return user_ids;
     }
 
     /**
