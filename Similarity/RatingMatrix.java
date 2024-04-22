@@ -56,24 +56,15 @@ public class RatingMatrix {
 
 
     /**
-     * Insert user, book pair into the matrix with scaleFactor = 1 and 
-     * shiftTerm = -3.
+     * Insert rating for user, book pair into the matrix.
      */
     public void insert(int user_id, int book_id, int rating) {
-        insert(user_id, book_id, rating, 1d, -3d);
-    }
-
-    /**
-     * Insert rating for user, book pair into the matrix with 
-     * rating modified by: scaleFactor*rating + shiftTerm.
-     */
-    public void insert(int user_id, int book_id, int rating, double scaleFactor, double shiftTerm) {
         var bookScores = userToBookScore.get(user_id);
         if (bookScores == null) {
             bookScores = new TreeMap<>();
             userToBookScore.put(user_id, bookScores);
         }
-        bookScores.put(book_id, scaleFactor*rating + shiftTerm);
+        bookScores.put(book_id, (double) rating);
     } 
 
     /**
@@ -146,20 +137,20 @@ public class RatingMatrix {
         var matrix = new RatingMatrix();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
-        matrix.insert(0, 0, 3);
-        matrix.insert(0, 1, 5);
-        matrix.insert(0, 3, 4);
-        matrix.insert(0, 4, 1);
+        matrix.insert(0, 0, 3 - 3);
+        matrix.insert(0, 1, 5 - 3);
+        matrix.insert(0, 3, 4 - 3);
+        matrix.insert(0, 4, 1 - 3);
 
-        matrix.insert(1, 0, 4);
-        matrix.insert(1, 2, 1);
-        matrix.insert(1, 3, 2);
-        matrix.insert(1, 5, 4);
+        matrix.insert(1, 0, 4 - 3);
+        matrix.insert(1, 2, 1 - 3);
+        matrix.insert(1, 3, 2 - 3);
+        matrix.insert(1, 5, 4 - 3);
 
-        matrix.insert(2, 1, 3);
-        matrix.insert(2, 2, 2);
-        matrix.insert(2, 3, 5);
-        matrix.insert(2, 4, 2);
+        matrix.insert(2, 1, 3 - 3);
+        matrix.insert(2, 2, 2 - 3);
+        matrix.insert(2, 3, 5 - 3);
+        matrix.insert(2, 4, 2 - 3);
 
         /* Sim should be equal to expectedSim. */
         var sim01 = matrix.sim(0,1);

@@ -76,7 +76,7 @@ public class SimilarityMatrix {
 
         var similarityMatrix = new SimilarityMatrix(ratingMatrix);
 
-        /* Sim should be equal to expectedSim. */
+        /* Sim similarities should be equal. */
         var ratingSim00 = ratingMatrix.sim(0,0);
         var ratingSim01 = ratingMatrix.sim(0,1);
         var ratingSim02 = ratingMatrix.sim(0,2);
