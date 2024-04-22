@@ -1,29 +1,31 @@
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.DoubleFunction;
-
 
 /**
+ * Author: Erik Lidbjörk.
+ * Date 2024.
+ * 
  * Matrix where rows and columns are represented by user id's.
- * Entries are similarity scores between each user computed
- * from a RatingMatrix object.
+ * Entries are similarity scores between each user from a 
+ * Collection of users computed from a Similarity.
  */
-public class SimilarityMatrix {
+public class SimilarityMatrix implements Similarity {
     /* Store similarity scores. */
     private Map<Integer,Map<Integer,Double>> userToUserSimilarity = new HashMap<>();
 
     /** 
-     * Precompute similarities with specified metric and store in RAM. 
+     * Precompute similarities and store in RAM. 
      */
-    SimilarityMatrix(RatingMatrix ratingMatrix, DoubleFunction<Double> metric) {
+    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids) {
         /* Iterate over every user in rating matrix. */
-        for (var user_id_A : ratingMatrix.getUserIds()) {
+        for (var user_id_A : user_ids) {
             userToUserSimilarity.put(user_id_A, new HashMap<>());
-            for (var user_id_B : ratingMatrix.getUserIds()) {
+            for (var user_id_B : user_ids) {
                 /* Check if similarity has been computed already. */
                 double sim;
                 if (userToUserSimilarity.get(user_id_B) == null || user_id_A == user_id_B) {
-                    sim = ratingMatrix.sim(user_id_A, user_id_B, metric);
+                    sim = similarity.sim(user_id_A, user_id_B);
                 } else {
                     sim = userToUserSimilarity.get(user_id_B).get(user_id_A);
                 }
@@ -33,21 +35,11 @@ public class SimilarityMatrix {
     }
 
     /**
-     * Default behaviour is using euclidean metric.
+     * Get similarity score between two users.
      */
-    SimilarityMatrix(RatingMatrix ratingMatrix) {
-        this(ratingMatrix, rating -> Math.pow(rating, 2));
-    }
-
-    /**
-     * Get similarity of user, user pair or null if does not exist.
-     */
-    public Double sim(int user_id_A, int user_id_B) {
-        var similarities = userToUserSimilarity.get(user_id_A);
-        if (similarities == null) {
-            return null;
-        }
-        return similarities.get(user_id_B);
+    @Override
+    public double sim(int user_id_A, int user_id_B) {
+        return userToUserSimilarity.get(user_id_A).get(user_id_B);
     }
 
 
@@ -56,7 +48,7 @@ public class SimilarityMatrix {
      * SimilarityMatrix are consistent.
      */
     public static void main(String[] args) {
-        var ratingMatrix = new RatingMatrix();
+        var ratingMatrix = new RatingMatrixCosineSimilarity();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
         ratingMatrix.insert(0, 0, 3);
@@ -74,7 +66,8 @@ public class SimilarityMatrix {
         ratingMatrix.insert(2, 3, 5);
         ratingMatrix.insert(2, 4, 2);
 
-        var similarityMatrix = new SimilarityMatrix(ratingMatrix);
+        /* Store precomputed similarities from ratingMatrix to a SimilarityMatrix. */
+        var similarityMatrix = new SimilarityMatrix(ratingMatrix, ratingMatrix.getUserIds());
 
         /* Sim similarities should be equal. */
         var ratingSim00 = ratingMatrix.sim(0,0);
@@ -91,11 +84,11 @@ public class SimilarityMatrix {
         var similaritySim12 = similarityMatrix.sim(1,2);
         var similaritySim22 = similarityMatrix.sim(2,2);
 
-        System.out.println(ratingSim00 == (double) similaritySim00);
-        System.out.println(ratingSim01 == (double) similaritySim01);
-        System.out.println(ratingSim02 == (double) similaritySim02);
-        System.out.println(ratingSim11 == (double) similaritySim11);
-        System.out.println(ratingSim12 == (double) similaritySim12);
-        System.out.println(ratingSim22 == (double) similaritySim22);
+        System.out.println(ratingSim00 == similaritySim00);
+        System.out.println(ratingSim01 == similaritySim01);
+        System.out.println(ratingSim02 == similaritySim02);
+        System.out.println(ratingSim11 == similaritySim11);
+        System.out.println(ratingSim12 == similaritySim12);
+        System.out.println(ratingSim22 == similaritySim22);
     }
 }
