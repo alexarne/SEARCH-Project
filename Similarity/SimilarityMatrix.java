@@ -17,14 +17,14 @@ public class SimilarityMatrix implements Similarity {
     /** 
      * Precompute similarities and store in RAM. 
      */
-    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids) {
+    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids, boolean similarityIsSymmetric) {
         /* Iterate over every user in rating matrix. */
         for (var user_id_A : user_ids) {
             userToUserSimilarity.put(user_id_A, new HashMap<>());
             for (var user_id_B : user_ids) {
-                /* Check if similarity has been computed already. */
+                /* Check if similarity has been computed already if similarities are symmetric. */
                 double sim;
-                if (userToUserSimilarity.get(user_id_B) == null || user_id_A == user_id_B) {
+                if (!similarityIsSymmetric || userToUserSimilarity.get(user_id_B) == null || user_id_A == user_id_B) {
                     sim = similarity.sim(user_id_A, user_id_B);
                 } else {
                     sim = userToUserSimilarity.get(user_id_B).get(user_id_A);
@@ -32,6 +32,10 @@ public class SimilarityMatrix implements Similarity {
                 userToUserSimilarity.get(user_id_A).put(user_id_B, sim);
             }
         }
+    }
+
+    SimilarityMatrix(Similarity similarity, Collection<Integer> user_ids) {
+        this(similarity, user_ids, true);
     }
 
     /**
