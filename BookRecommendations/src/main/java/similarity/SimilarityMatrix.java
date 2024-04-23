@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import similarity.Similarity;
-
 /**
  * Author: Erik Lidbjörk.
  * Date 2024.
