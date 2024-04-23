@@ -64,17 +64,8 @@ async def indexBooks():
         tasks = [asyncio.ensure_future(indexBookList(pageNumber, session)) for pageNumber in range(1, NUM_LIST_PAGES+1)]
         await asyncio.gather(*tasks)
         print()
-<<<<<<< HEAD
         global numErrorBooks
         print(f"Non-existing books: {numErrorBooks}")
-=======
-        global numErrors
-        print(f"Non-existing books: {numErrors}")
-        # await indexBook("https://www.goodreads.com/components/show/135836.Trainspotting", session)
-    # indexBook("https://www.goodreads.com/components/show/2767052-the-hunger-games")
-    # indexBook("https://www.goodreads.com/components/show/1885.Pride_and_Prejudice")
-    # indexBook("https://www.goodreads.com/components/show/12067.Good_Omens?from_search=true&from_srp=true&qid=AYPzlLhVGU&rank=1")
->>>>>>> 3864739 (update gui/searcher to support user profile)
 
 async def indexBookList(pageNumber, session):
     URLs = await getBookURLs(pageNumber, session)
@@ -141,13 +132,8 @@ def addBookToIndex(data):
     client.index(index=getenv("ES_INDEX"),
              id=numIndexedBooks,
              document=data)
-<<<<<<< HEAD
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
-=======
-    # print("Indexed components " + data["title"] + " by " + data["author"])
-    updateProgress()
->>>>>>> 3864739 (update gui/searcher to support user profile)
 
 async def fetch(session, url):
     status = 404
