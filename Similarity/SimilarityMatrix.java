@@ -72,7 +72,7 @@ public class SimilarityMatrix implements Similarity {
             if (userToUserSimilarity.get(user_id_B) == null) {
                 userToUserSimilarity.put(user_id_B, new HashMap<>());
             }
-            userToUserSimilarity.get(user_id_B).put(user_id_B, sim);
+            userToUserSimilarity.get(user_id_B).put(user_id_A, sim);
         }
     }
 
