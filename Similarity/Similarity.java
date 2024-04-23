@@ -6,5 +6,5 @@
  * A and B based on their user_ids.
  */
 public interface Similarity {
-    double sim(int user_id_A, int user_id_B);
+    public double sim(int user_id_A, int user_id_B);
 }   
