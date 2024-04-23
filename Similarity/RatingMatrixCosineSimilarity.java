@@ -65,8 +65,14 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
         }
         double lenA = length(user_id_A, metric);
         double lenB = length(user_id_B, metric);
-        if (lenA == 0d || lenB == 0d) {
-            return Math.signum(dotProduct) * Math.signum(lenA) * Math.signum(lenB) * Double.POSITIVE_INFINITY;
+        if (lenA == 0d && lenB != 0d) {
+            return Math.signum(dotProduct) * Math.signum(lenB) * Double.POSITIVE_INFINITY;
+        }
+        if (lenA != 0d && lenB == 0d) {
+            return Math.signum(dotProduct) * Math.signum(lenA) * Double.POSITIVE_INFINITY;
+        }
+        if (lenA == 0d && lenB == 0d) {
+            return Math.signum(dotProduct) * Double.POSITIVE_INFINITY;
         }
         return dotProduct / (lenA * lenB);
     }    
