@@ -17,11 +17,19 @@ public class SimilarityMatrix implements Similarity {
 
     /**
      * Create empty SimilarityMatrix.
-     * Insert similarities with insert.
      * Similarity is assumed to be assymetric.
+     * Insert similarities with insert.
      */
     public SimilarityMatrix() {
         this.similarityIsSymmetric = false;
+    }
+
+    /**
+     * Create empty SimilarityMatrix.
+     * Insert similarities with insert.
+     */
+    public SimilarityMatrix(boolean similarityIsSymmetric) {
+        this.similarityIsSymmetric = similarityIsSymmetric;
     }
 
     /** 
@@ -51,22 +59,20 @@ public class SimilarityMatrix implements Similarity {
     }
 
     /**
-     * Insert similarity scores sim(A,B) where A is user_id and B are a set user_ids.
+     * Insert similarity score sim(A,B). 
      */
-    public void insert(Similarity similarity, int user_id, Set<Integer> other_user_ids) {
-        if (userToUserSimilarity.get(user_id) == null) {
-            userToUserSimilarity.put(user_id, new HashMap<>());
-        }
-        for (var other_user_id : other_user_ids) {
-            double sim = similarity.sim(user_id, other_user_id);
-            if (!similarityIsSymmetric || user_id <= other_user_id) {
-                userToUserSimilarity.get(user_id).put(other_user_id, sim);
-            } else {
-                if (userToUserSimilarity.get(other_user_id) == null) {
-                    userToUserSimilarity.put(other_user_id, new HashMap<>());
-                }
-                userToUserSimilarity.get(other_user_id).put(user_id, sim);
+    public void insert(Similarity similarity, int user_id_A, int user_id_B) {
+        double sim = similarity.sim(user_id_A, user_id_B);
+        if (!similarityIsSymmetric || user_id_A <= user_id_B) {
+            if (userToUserSimilarity.get(user_id_A) == null) {
+                userToUserSimilarity.put(user_id_A, new HashMap<>());
             }
+            userToUserSimilarity.get(user_id_A).put(user_id_B, sim);
+        } else {
+            if (userToUserSimilarity.get(user_id_B) == null) {
+                userToUserSimilarity.put(user_id_B, new HashMap<>());
+            }
+            userToUserSimilarity.get(user_id_B).put(user_id_B, sim);
         }
     }
 
@@ -109,7 +115,7 @@ public class SimilarityMatrix implements Similarity {
         /* Store precomputed similarities from ratingMatrix to a SimilarityMatrix. */
         var similarityMatrix = new SimilarityMatrix(ratingMatrix, ratingMatrix.getUserIds());
 
-        /* Sim similarities should be equal. */
+        /* Similarities should be equal. */
         var ratingSim00 = ratingMatrix.sim(0,0);
         var ratingSim01 = ratingMatrix.sim(0,1);
         var ratingSim02 = ratingMatrix.sim(0,2);
