@@ -14,32 +14,33 @@ public class SimilarityMatrix implements Similarity {
     /* Store similarity scores. */
     private Map<Integer,Map<Integer,Double>> userToUserSimilarity = new HashMap<>();
     private Set<Integer> user_ids;
+    private final boolean similarityIsSymmetric;
 
     /** 
      * Precompute similarities and store in RAM. 
+     * If similarity scores are symmetric, that is sim(A,B) = sim(B,A) for all A and B, 
+     * only compute and store one of the computations above.
      */
-    SimilarityMatrix(Similarity similarity, Set<Integer> user_ids, boolean similarityIsSymmetric) {
+    public SimilarityMatrix(Similarity similarity, Set<Integer> user_ids, boolean similarityIsSymmetric) {
         /* Iterate over every user in rating matrix. */
+        this.similarityIsSymmetric = similarityIsSymmetric;
         this.user_ids = user_ids;
         for (var user_id_A : user_ids) {
             userToUserSimilarity.put(user_id_A, new HashMap<>());
             for (var user_id_B : user_ids) {
-                /* Check if similarity has been computed already if similarities are symmetric. */
-                double sim;
-                if (!similarityIsSymmetric || userToUserSimilarity.get(user_id_B) == null || user_id_A == user_id_B) {
-                    sim = similarity.sim(user_id_A, user_id_B);
-                } else {
-                    sim = userToUserSimilarity.get(user_id_B).get(user_id_A);
-                }
-                userToUserSimilarity.get(user_id_A).put(user_id_B, sim);
+                if (!similarityIsSymmetric || user_id_A <= user_id_B) {
+                    double sim = similarity.sim(user_id_A, user_id_B);
+                    userToUserSimilarity.get(user_id_A).put(user_id_B, sim);
+                } 
             }
         }
+        System.out.println(userToUserSimilarity);
     }
 
     /**
-     * Metrics are assumed to be symmetric * if not specified. 
+     * Similarity scores are assumed to be symmetric if not specified. 
      */
-    SimilarityMatrix(Similarity similarity, Set<Integer> user_ids) {
+    public SimilarityMatrix(Similarity similarity, Set<Integer> user_ids) {
         this(similarity, user_ids, true);
     }
 
@@ -55,7 +56,11 @@ public class SimilarityMatrix implements Similarity {
      */
     @Override
     public double sim(int user_id_A, int user_id_B) {
-        return userToUserSimilarity.get(user_id_A).get(user_id_B);
+        if (!similarityIsSymmetric || user_id_A <= user_id_B) {
+            return userToUserSimilarity.get(user_id_A).get(user_id_B);
+        } else {
+            return userToUserSimilarity.get(user_id_B).get(user_id_A);
+        }
     }
 
 

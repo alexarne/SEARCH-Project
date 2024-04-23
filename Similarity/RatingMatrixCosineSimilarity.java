@@ -20,15 +20,25 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
         var iterB = bookScoresB.entrySet().iterator();
 
         double dotProduct = 0d;
-        while (iterA.hasNext() && iterB.hasNext()) {
-            var entryA = iterA.next();
-            var entryB = iterB.next();
-
+        var entryA = iterA.next();
+        var entryB = iterB.next();
+        /* Union search, linear scan. */
+        while (true) {
             if (entryA.getKey() == entryB.getKey()) {
                 dotProduct += entryA.getValue() * entryB.getValue();
             }
-        }        
-        return dotProduct;
+            if (!iterA.hasNext() && !iterB.hasNext()) {
+                return dotProduct;
+            }
+            if (entryA.getKey() == entryB.getKey()) {
+                entryA = iterA.next();
+                entryB = iterB.next();
+            } else if (entryA.getKey() < entryB.getKey()) {
+                entryA = iterA.next();
+            } else {
+                entryB = iterB.next();
+            }
+        }   
     }
 
     /**
@@ -53,17 +63,11 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
         if (dotProduct == 0d) {
             return 0d;
         }
-
         double lenA = length(user_id_A, metric);
-        if (lenA == 0d) {
-            return Math.signum(dotProduct) * Double.POSITIVE_INFINITY;
-        }
-
         double lenB = length(user_id_B, metric);
-        if (lenB == 0d) {
-            return Math.signum(dotProduct) * Double.POSITIVE_INFINITY;
+        if (lenA == 0d || lenB == 0d) {
+            return Math.signum(dotProduct) * Math.signum(lenA) * Math.signum(lenB) * Double.POSITIVE_INFINITY;
         }
-
         return dotProduct / (lenA * lenB);
     }    
 
@@ -82,7 +86,38 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
     }
 
     /**
-     * Euclidean norm is default similarity. 
+     * Get "assymetric" cosine similarity between user A and B with specified metric.
+     * Do not calcualte length of user A since it will be the same for all comparisons to other users.
+     */
+    public double simAssymetric(int user_id_A, int user_id_B, DoubleFunction<Double> metric) {
+        double dotProduct = dot(user_id_A, user_id_B);
+        if (dotProduct == 0d) {
+            return 0d;
+        }
+        double lenB = length(user_id_B, metric);
+        if (lenB == 0d) {
+            return Math.signum(dotProduct) * Double.POSITIVE_INFINITY;
+        }
+        return dotProduct / lenB;
+    }    
+
+    /**
+     * Get assymetric cosine similarity between user A and B with euclidean metric.
+     */
+    public double simAssymetricEuclidean(int user_id_A, int user_id_B) {
+        return simAssymetric(user_id_A, user_id_B, rating -> Math.pow(rating, 2));
+    }
+
+    /**
+     * Get assymetric cosine similarity between user A and B with manhattan metric.
+     */
+    public double simAssymetricManhattan(int user_id_A, int user_id_B) {
+        return simAssymetric(user_id_A, user_id_B, rating -> Math.abs(rating));
+    }
+
+
+    /**
+     * Default similarity score is symmetric with euclidean norm. 
      * Override this method to use something else for the 
      * Similarity interface.
      */
