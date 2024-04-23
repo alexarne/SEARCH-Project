@@ -1,3 +1,5 @@
+package similarity;
+
 import java.util.function.DoubleFunction;
 
 /**

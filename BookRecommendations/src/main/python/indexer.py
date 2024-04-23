@@ -2,6 +2,9 @@ from bs4 import BeautifulSoup
 import asyncio
 import aiohttp
 import sys
+from elasticsearch import Elasticsearch
+from os import getenv
+from dotenv import load_dotenv
 
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
@@ -43,9 +46,16 @@ HEADERS = {
     'Sec-Fetch-User' : '?1',
 }
 
-
-
 ### Book scraping ###
+
+load_dotenv()
+client = Elasticsearch(
+  ELASTIC_INSERT_URL,
+  ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
+  basic_auth=("elastic", getenv("ES_PASSWORD"))
+)
+
+client.indices.create(index=getenv("ES_INDEX"))
 
 async def indexBooks():
     async with aiohttp.ClientSession() as session:
@@ -73,7 +83,7 @@ async def getBookURLs(pageNumber, session):
     return URLs
 
 async def indexBook(URL, session):
-    # print(f"Indexing book {URL}")
+    # print(f"Indexing components {URL}")
     page = await fetch(session, URL)
     soup = BeautifulSoup(page, "html.parser")
     # print(soup.prettify())
@@ -95,9 +105,9 @@ async def indexBook(URL, session):
         print(f"crash point abstract on {URL}")
     for br in abstract.find_all("br"):
         br.replace_with("\n")
-    result["abstract"] = abstract.text
+    result["abstr"] = abstract.text
 
-    # Get author (assuming just one, reason: https://www.goodreads.com/book/show/7190.The_Three_Musketeers)
+    # Get author (assuming just one, reason: https://www.goodreads.com/components/show/7190.The_Three_Musketeers)
     authorSection = mainContent.find("div", class_="BookPageMetadataSection__contributor")
     author = authorSection.find("span", class_="ContributorLink__name")
     result["author"] = author.text
@@ -118,6 +128,10 @@ async def indexBook(URL, session):
     addBookToIndex(result)
 
 def addBookToIndex(data):
+    data["id"] = numIndexedBooks
+    client.index(index=getenv("ES_INDEX"),
+             id=numIndexedBooks,
+             document=data)
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
 
@@ -156,7 +170,7 @@ async def indexUsers():
         addProgressGoalUsers(len(userIDs))
         tasks = [asyncio.ensure_future(indexUser(session, userID, FRIEND_DEPTH)) for userID in userIDs]
         await asyncio.gather(*tasks)
-        
+
 def getUserIDs():
     # Retrieved from top users in the world for "this" week (https://www.goodreads.com/user/best_reviewers?country=all&duration=w)
     return [53701594, 29005117, 113964939, 32879029, 22106879, 5599497, 124132123, 16958299, 151231754, 6431467, 49815208, 48328025, 3569327, 138801181, 4622890, 128034500, 149694522, 60866073, 19283284, 154684875, 142072672, 22189348, 10490224, 82156089, 42130592, 89100122, 10171516, 1720620, 29981066, 48727754, 1323413, 27304766, 11215896, 150076375, 91622714, 30181442, 66222749, 13427823, 106675807, 80549046, 156768790, 11345366, 120762651, 138277086, 148600677, 11701608, 4674014, 8114361, 10477405, 4125660, 59458347, 54835325, 25400887, 134523072, 151334777, 721595, 117399210, 3672777, 78009594, 137111152, 1151637, 39575951, 107658832, 89964678, 26560207, 155007415, 38610813, 142245488, 35794399, 110912303, 104791668, 70395042, 5032725, 2190064, 142709713, 8338960, 1232712, 151638606, 91520258, 11626803, 11284813, 1526851, 77509618, 5009669, 60964126, 129743582, 3978225, 41321285, 112332654, 103654355, 67861858, 45147300, 17119647, 2846645, 128403534, 161893172, 42926711, 110612670]

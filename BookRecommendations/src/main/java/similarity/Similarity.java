@@ -1,3 +1,5 @@
+package similarity;
+
 /**
  * Author: Erik Lidbjörk.
  * Date 2024.
