@@ -17,18 +17,25 @@ import similarity.Similarity;
 public class SimilarityMatrix implements Similarity {
     /* Store similarity scores. */
     private Map<Integer,Map<Integer,Double>> userToUserSimilarity = new HashMap<>();
-    private Set<Integer> user_ids;
     private final boolean similarityIsSymmetric;
 
+    /**
+     * Create empty SimilarityMatrix.
+     * Insert similarities with insert.
+     * Similarity is assumed to be assymetric.
+     */
+    public SimilarityMatrix() {
+        this.similarityIsSymmetric = false;
+    }
+
     /** 
-     * Precompute similarities and store in RAM. 
+     * Precompute similarities between all users in user_ids and store in RAM. 
      * If similarity scores are symmetric, that is sim(A,B) = sim(B,A) for all A and B, 
      * only compute and store one of the computations above.
      */
     public SimilarityMatrix(Similarity similarity, Set<Integer> user_ids, boolean similarityIsSymmetric) {
         /* Iterate over every user in rating matrix. */
         this.similarityIsSymmetric = similarityIsSymmetric;
-        this.user_ids = user_ids;
         for (var user_id_A : user_ids) {
             userToUserSimilarity.put(user_id_A, new HashMap<>());
             for (var user_id_B : user_ids) {
@@ -48,10 +55,23 @@ public class SimilarityMatrix implements Similarity {
     }
 
     /**
-     * Return set of all user id's.
+     * Insert similarity scores sim(A,B) where A is user_id and B are a set user_ids.
      */
-    public Set<Integer> getUserIds() {
-        return user_ids;
+    public void insert(Similarity similarity, int user_id, Set<Integer> other_user_ids) {
+        if (userToUserSimilarity.get(user_id) == null) {
+            userToUserSimilarity.put(user_id, new HashMap<>());
+        }
+        for (var other_user_id : other_user_ids) {
+            double sim = similarity.sim(user_id, other_user_id);
+            if (!similarityIsSymmetric || user_id <= other_user_id) {
+                userToUserSimilarity.get(user_id).put(other_user_id, sim);
+            } else {
+                if (userToUserSimilarity.get(other_user_id) == null) {
+                    userToUserSimilarity.put(other_user_id, new HashMap<>());
+                }
+                userToUserSimilarity.get(other_user_id).put(user_id, sim);
+            }
+        }
     }
 
     /**
