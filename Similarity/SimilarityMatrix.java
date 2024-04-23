@@ -34,7 +34,6 @@ public class SimilarityMatrix implements Similarity {
                 } 
             }
         }
-        System.out.println(userToUserSimilarity);
     }
 
     /**

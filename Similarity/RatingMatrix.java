@@ -25,13 +25,13 @@ public class RatingMatrix {
     /**
      * Insert rating for user, book pair into the matrix.
      */
-    public void insert(int user_id, int book_id, int rating) {
+    public void insert(int user_id, int book_id, double rating) {
         var bookScores = userToBookScore.get(user_id);
         if (bookScores == null) {
             bookScores = new TreeMap<>();
             userToBookScore.put(user_id, bookScores);
         }
-        bookScores.put(book_id, (double) rating);
+        bookScores.put(book_id, rating);
     } 
 
     /**
