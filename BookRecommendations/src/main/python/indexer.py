@@ -55,6 +55,7 @@ client = Elasticsearch(
   basic_auth=("elastic", getenv("ES_PASSWORD"))
 )
 
+client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
 client.indices.create(index=getenv("ES_INDEX"))
 
 async def indexBooks():
@@ -127,12 +128,15 @@ async def indexBook(URL, session):
     # print(URL)
     addBookToIndex(result)
 
+numIndexedBooks = 0
 def addBookToIndex(data):
+    global numIndexedBooks
+    numIndexedBooks += 1
     data["id"] = numIndexedBooks
     client.index(index=getenv("ES_INDEX"),
              id=numIndexedBooks,
              document=data)
-    # print("Indexed book " + data["title"] + " by " + data["author"])
+    print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
 
 async def fetch(session, url):

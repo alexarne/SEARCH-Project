@@ -32,12 +32,16 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
             if (!iterA.hasNext() && !iterB.hasNext()) {
                 return dotProduct;
             }
-            if (entryA.getKey() == entryB.getKey()) {
-                entryA = iterA.next();
+            if (!iterA.hasNext()) {
                 entryB = iterB.next();
+            } else if (!iterB.hasNext()) {
+                entryA = iterA.next();
             } else if (entryA.getKey() < entryB.getKey()) {
                 entryA = iterA.next();
+            } else if (entryA.getKey() > entryB.getKey()) {
+                entryB = iterB.next();
             } else {
+                entryA = iterA.next();
                 entryB = iterB.next();
             }
         }   

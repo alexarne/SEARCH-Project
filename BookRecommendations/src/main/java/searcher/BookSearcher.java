@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.net.ssl.SSLContext;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -20,6 +21,8 @@ import co.elastic.clients.transport.TransportUtils;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import components.QueryType;
 import components.UserProfile;
+import similarity.RatingMatrixCosineSimilarity;
+
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -58,6 +61,24 @@ public class BookSearcher {
     private Map<Integer, Double> getBoostedScores(List<Hit<Book>> hits, UserProfile user) {
         Map<Integer, Double> boosts = new HashMap<>();
         List<UserProfile> similarUsers = user.getSimilarUsers();
+
+        /* Test user similarity. */
+        if (!user.getRatings().isEmpty()) {
+            List<Book> books = hits.stream().map(hit -> hit.source()).toList();
+            similarUsers = UserProfile.getSimilarUsers(books, 10); // Compare ratings to 10 randomly generated users.
+            List<Double> simScores = user.getSimilarityScores(similarUsers);
+
+            for (Hit<Book> hit : hits) {
+                int bookId = hit.source().getId();
+                boosts.put(bookId, hit.score());
+
+                for (int i = 0; i < similarUsers.size(); ++i) {
+                    boosts.put(bookId, boosts.get(bookId) + 1e2*simScores.get(i)*similarUsers.get(i).getRating(bookId));
+                }
+            }
+            return boosts;
+        }
+
         for (Hit<Book> hit : hits) {
             int bookId = hit.source().getId();
             boosts.put(bookId, hit.score());
