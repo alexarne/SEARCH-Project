@@ -4,6 +4,10 @@ import components.Book;
 import components.UserProfile;
 import io.github.cdimascio.dotenv.Dotenv;
 import searcher.BookSearcher;
+import similarity.CosineSimilarity;
+import similarity.RatingMatrix;
+import similarity.Similarity;
+import similarity.SimilarityMatrix;
 import components.QueryType;
 
 import javax.imageio.ImageIO;
@@ -51,6 +55,9 @@ public class BookSearchUi extends JFrame {
     QueryType queryType;
 
     UserProfile user;
+
+    private RatingMatrix ratingMatrix;
+    private Similarity similarity;
 
     final int FRAME_WIDTH = 600;
     final int FRAME_HEIGHT = 650;
@@ -170,6 +177,34 @@ public class BookSearchUi extends JFrame {
         quitItem.addActionListener(quit);
 
         user = new UserProfile();
+
+        initRatingMatrix();
+        initSimilarity();
+    }
+
+    /**
+     * Fill rating matrix between all users on goodreads.
+     */
+    private void initRatingMatrix() {
+        ratingMatrix = new RatingMatrix();
+    }
+
+    /**
+     * Setup similarity.
+     */
+    private void initSimilarity() {
+        Similarity cosineSimilarity = new CosineSimilarity(ratingMatrix);
+        Similarity similarityMatrix = new SimilarityMatrix(cosineSimilarity, user.getId(), ratingMatrix.getUserIds());
+
+        //similarity = cosineSimilarity;
+        similarity = similarityMatrix;
+    }
+
+    /**
+     * Insert/update rating for user.
+     */
+    public void insertRating(int book_id, double rating) {
+        ratingMatrix.insert(user.getId(), book_id, rating);
     }
 
     // To use for errors, like when we get no results.

@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import similarity.RatingMatrixCosineSimilarity;
+import similarity.CosineSimilarity;
+import similarity.RatingMatrix;
 
 public class UserProfile {
 
@@ -14,7 +15,7 @@ public class UserProfile {
     private final int user_id;
 
     public UserProfile() {
-        user_id = 0;
+        user_id = 0; // Default id as 0 since goodreads start counting at id = 1.
     }
 
     public UserProfile(int user_id) {
@@ -95,7 +96,7 @@ public class UserProfile {
      * Returns similarity scores between user and each similarUser.
      */
     public List<Double> getSimilarityScores(List<UserProfile> similarUsers) {
-        var m = new RatingMatrixCosineSimilarity();
+        var m = new RatingMatrix();
 
         /* Calculate similarities. */
         for (var entry : this.getRatings().entrySet()) {
@@ -106,8 +107,13 @@ public class UserProfile {
             for (var entry : similarUser.getRatings().entrySet()) {
                 m.insert(similarUser.user_id, entry.getKey(), entry.getValue());
             }
-            simScores.add(m.sim(user_id,similarUser.user_id));
         }
+
+        var sim = new CosineSimilarity(m);
+        for (var similarUser : similarUsers) {
+            simScores.add(sim.sim(user_id,similarUser.user_id));
+        }
+
         return simScores;
     }
 }

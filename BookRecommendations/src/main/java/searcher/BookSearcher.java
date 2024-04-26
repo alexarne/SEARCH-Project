@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.net.ssl.SSLContext;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -21,7 +20,6 @@ import co.elastic.clients.transport.TransportUtils;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import components.QueryType;
 import components.UserProfile;
-import similarity.RatingMatrixCosineSimilarity;
 
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
