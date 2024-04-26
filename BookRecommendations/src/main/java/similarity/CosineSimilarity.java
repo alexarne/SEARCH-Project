@@ -7,7 +7,7 @@ import java.util.function.DoubleFunction;
  * Date 2024.
  * 
  * Compute cosine similarities between users from 
- * 
+ * a RatingMatrix. 
  */
 public class CosineSimilarity implements Similarity {
     private RatingMatrix ratingMarix;
@@ -130,7 +130,6 @@ public class CosineSimilarity implements Similarity {
         return simAssymetric(user_id_A, user_id_B, rating -> Math.abs(rating));
     }
 
-
     /**
      * Default similarity score is symmetric with euclidean norm. 
      * Override this method to use something else for the 
@@ -149,20 +148,20 @@ public class CosineSimilarity implements Similarity {
         var matrix = new RatingMatrix();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
-        matrix.insert(0, 0, 3 - 3);
-        matrix.insert(0, 1, 5 - 3);
-        matrix.insert(0, 3, 4 - 3);
-        matrix.insert(0, 4, 1 - 3);
+        matrix.put(0, 0, 3 - 3);
+        matrix.put(0, 1, 5 - 3);
+        matrix.put(0, 3, 4 - 3);
+        matrix.put(0, 4, 1 - 3);
 
-        matrix.insert(1, 0, 4 - 3);
-        matrix.insert(1, 2, 1 - 3);
-        matrix.insert(1, 3, 2 - 3);
-        matrix.insert(1, 5, 4 - 3);
+        matrix.put(1, 0, 4 - 3);
+        matrix.put(1, 2, 1 - 3);
+        matrix.put(1, 3, 2 - 3);
+        matrix.put(1, 5, 4 - 3);
 
-        matrix.insert(2, 1, 3 - 3);
-        matrix.insert(2, 2, 2 - 3);
-        matrix.insert(2, 3, 5 - 3);
-        matrix.insert(2, 4, 2 - 3);
+        matrix.put(2, 1, 3 - 3);
+        matrix.put(2, 2, 2 - 3);
+        matrix.put(2, 3, 5 - 3);
+        matrix.put(2, 4, 2 - 3);
 
         /* Sim should be equal to expectedSim. */
         var sim = new CosineSimilarity(matrix);

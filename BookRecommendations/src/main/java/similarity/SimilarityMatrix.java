@@ -20,7 +20,7 @@ public class SimilarityMatrix implements Similarity {
     /**
      * Create empty SimilarityMatrix.
      * Similarity is assumed to be assymetric.
-     * Insert similarities with insert.
+     * Insert similarities with put.
      */
     public SimilarityMatrix() {
         this.similarityIsSymmetric = false;
@@ -28,7 +28,7 @@ public class SimilarityMatrix implements Similarity {
 
     /**
      * Create empty SimilarityMatrix.
-     * Insert similarities with insert.
+     * Insert similarities with put.
      */
     public SimilarityMatrix(boolean similarityIsSymmetric) {
         this.similarityIsSymmetric = similarityIsSymmetric;
@@ -66,7 +66,7 @@ public class SimilarityMatrix implements Similarity {
     public SimilarityMatrix(Similarity similarity, int user_id, Set<Integer> other_user_ids, boolean similarityIsSymmetric) {
         this.similarityIsSymmetric = similarityIsSymmetric;
         for (int other_user_id : other_user_ids) {
-            insert(similarity, user_id, other_user_id);
+            put(similarity, user_id, other_user_id);
         }
     }
 
@@ -78,9 +78,9 @@ public class SimilarityMatrix implements Similarity {
     }
 
     /**
-     * Insert similarity score sim(A,B). 
+     * Insert/update similarity score sim(A,B). 
      */
-    public void insert(Similarity similarity, int user_id_A, int user_id_B) {
+    public void put(Similarity similarity, int user_id_A, int user_id_B) {
         double sim = similarity.sim(user_id_A, user_id_B);
         if (!similarityIsSymmetric || user_id_A <= user_id_B) {
             if (userToUserSimilarity.get(user_id_A) == null) {
@@ -116,20 +116,20 @@ public class SimilarityMatrix implements Similarity {
         var ratingMatrix = new RatingMatrix();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
-        ratingMatrix.insert(0, 0, 3);
-        ratingMatrix.insert(0, 1, 5);
-        ratingMatrix.insert(0, 3, 4);
-        ratingMatrix.insert(0, 4, 1);
+        ratingMatrix.put(0, 0, 3);
+        ratingMatrix.put(0, 1, 5);
+        ratingMatrix.put(0, 3, 4);
+        ratingMatrix.put(0, 4, 1);
 
-        ratingMatrix.insert(1, 0, 4);
-        ratingMatrix.insert(1, 2, 1);
-        ratingMatrix.insert(1, 3, 2);
-        ratingMatrix.insert(1, 5, 4);
+        ratingMatrix.put(1, 0, 4);
+        ratingMatrix.put(1, 2, 1);
+        ratingMatrix.put(1, 3, 2);
+        ratingMatrix.put(1, 5, 4);
 
-        ratingMatrix.insert(2, 1, 3);
-        ratingMatrix.insert(2, 2, 2);
-        ratingMatrix.insert(2, 3, 5);
-        ratingMatrix.insert(2, 4, 2);
+        ratingMatrix.put(2, 1, 3);
+        ratingMatrix.put(2, 2, 2);
+        ratingMatrix.put(2, 3, 5);
+        ratingMatrix.put(2, 4, 2);
 
         /* Compute cosine similarities. */
         var cosineSimilarity = new CosineSimilarity(ratingMatrix);
@@ -140,7 +140,7 @@ public class SimilarityMatrix implements Similarity {
         var similarityMatrix = new SimilarityMatrix(cosineSimilarity, 0, ratingMatrix.getUserIds());
         for (int i = 1; i < 3; ++i) {
             for (int j = 0; j < 3; ++j) {
-                similarityMatrix.insert(cosineSimilarity, i, j);
+                similarityMatrix.put(cosineSimilarity, i, j);
             }
         }
 

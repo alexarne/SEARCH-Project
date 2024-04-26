@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.net.ssl.SSLContext;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -20,6 +22,8 @@ import co.elastic.clients.transport.TransportUtils;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import components.QueryType;
 import components.UserProfile;
+import similarity.RatingMatrix;
+import similarity.Similarity;
 
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -130,5 +134,80 @@ public class BookSearcher {
             });
         }
         return results;
+    }
+
+    public List<Book> searchBooks(String queryTerms, QueryType queryType, UserProfile user, RatingMatrix ratingMatrix, Similarity similarity) throws IOException {
+        Query byTitle = MatchQuery.of(m -> m
+                .field("title")
+                .query(queryTerms)
+        )._toQuery();
+        Query byAbstract = MatchQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+        )._toQuery();
+        Query byTitlePhrase = MatchPhraseQuery.of(m -> m
+                .field("title")
+                .query(queryTerms)
+        )._toQuery();
+        Query byAbstractPhrase = MatchPhraseQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+        )._toQuery();
+        SearchResponse<Book> response = esClient.search(s -> s
+                        .index(indexName)
+                        .query(q -> q
+                                .bool(b -> b
+                                        .should(byTitle)
+                                        .should(byAbstract)
+                                        .should(byTitlePhrase)
+                                        .should(byAbstractPhrase)
+                                ))
+                        .size(SEARCH_LIMIT),
+                Book.class);
+        List<Hit<Book>> hits = response.hits().hits();
+        List<Book> results = new ArrayList<>();
+        for (Hit<Book> hit : hits) {
+            results.add(hit.source());
+        }
+        if (queryType == QueryType.USER_QUERY && !user.getRatings().isEmpty()) {
+            Set<Integer> similarUserIds = new HashSet<>();
+            for (var hit : hits) {
+                int book_id = hit.source().getId();
+                var users = ratingMatrix.getUsersFromBook(book_id);
+                if (users != null) {
+                    similarUserIds.addAll(users); // Expand set.
+                }
+            }
+            similarUserIds.remove(user.getId()); // Remove current user from similar users.
+            List<UserProfile> similarUsers = similarUserIds.stream().map(book_id -> new UserProfile(book_id)).toList();
+
+            Map<Integer, Double> boostedScores = getBoostedScores(hits, user, similarUsers, similarity);
+            results.sort(new Comparator<Book>() {
+                @Override
+                public int compare(Book b1, Book b2) {
+                    return (int)Math.signum(boostedScores.get(b2.getId()) - boostedScores.get(b1.getId()));
+                }
+            });
+        }
+        return results;
+    }
+
+    private Map<Integer, Double> getBoostedScores(List<Hit<Book>> hits, UserProfile user, List<UserProfile> similarUsers, Similarity similarity) {
+        Map<Integer, Double> boosts = new HashMap<>();
+
+        List<Double> simScores = new ArrayList<>();
+        for (var similarUser : similarUsers) {
+            simScores.add(similarity.sim(user.getId(), similarUser.getId()));
+        }
+
+        for (Hit<Book> hit : hits) {
+            int bookId = hit.source().getId();
+            boosts.put(bookId, hit.score());
+
+            for (int i = 0; i < similarUsers.size(); ++i) {
+                boosts.put(bookId, boosts.get(bookId) + 1e2*simScores.get(i)*similarUsers.get(i).getRating(bookId));
+            }
+        }
+        return boosts;
     }
 }

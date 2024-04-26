@@ -93,6 +93,7 @@ public class UserProfile {
     }
 
     /** 
+     * Test method.
      * Returns similarity scores between user and each similarUser.
      */
     public List<Double> getSimilarityScores(List<UserProfile> similarUsers) {
@@ -100,12 +101,12 @@ public class UserProfile {
 
         /* Calculate similarities. */
         for (var entry : this.getRatings().entrySet()) {
-            m.insert(user_id, entry.getKey(), entry.getValue());
+            m.put(user_id, entry.getKey(), entry.getValue());
         }
         List<Double> simScores = new ArrayList<>();
         for (var similarUser : similarUsers) {
             for (var entry : similarUser.getRatings().entrySet()) {
-                m.insert(similarUser.user_id, entry.getKey(), entry.getValue());
+                m.put(similarUser.user_id, entry.getKey(), entry.getValue());
             }
         }
 

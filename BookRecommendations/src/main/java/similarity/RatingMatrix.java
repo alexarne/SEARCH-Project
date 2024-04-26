@@ -24,14 +24,14 @@ import java.util.TreeMap;
 public class RatingMatrix {
     /* Matrix is internally represented as mappings from each user id
      * to an order mapping (by book ids ascendingly) to the rating. */
-    protected Map<Integer,SortedMap<Integer,Double>> userToBookScore = new HashMap<>();
+    private Map<Integer,SortedMap<Integer,Double>> userToBookScore = new HashMap<>();
     private Map<Integer,Set<Integer>> bookToUsers = new HashMap<>();
 
 
     /**
-     * Insert rating for user, book pair into the matrix.
+     * Insert/update rating for user, book pair into the matrix.
      */
-    public void insert(int user_id, int book_id, double rating) {
+    public void put(int user_id, int book_id, double rating) {
         var bookScores = userToBookScore.get(user_id);
         if (bookScores == null) {
             bookScores = new TreeMap<>();
@@ -48,14 +48,10 @@ public class RatingMatrix {
     } 
 
     /**
-     * Get rating of user, book pair or null if does not exist.
+     * Get rating of user book pair.
      */
-    public Double getRating(int user_id, int book_id) {
-        var bookScores = userToBookScore.get(user_id);
-        if (bookScores == null) {
-            return null;
-        }
-        return bookScores.get(user_id);
+    public double getRating(int user_id, int book_id) {
+        return userToBookScore.get(user_id).get(book_id);
     }
 
     /**
@@ -74,6 +70,7 @@ public class RatingMatrix {
 
     /**
      * Get set of users who has rated a book.
+     * Null if no one in matrix has rated book.
      */
     public Set<Integer> getUsersFromBook(int book_id) {
         return bookToUsers.get(book_id);
@@ -108,20 +105,20 @@ public class RatingMatrix {
         var matrix = new RatingMatrix();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
-        matrix.insert(0, 0, 3 - 3);
-        matrix.insert(0, 1, 5 - 3);
-        matrix.insert(0, 3, 4 - 3);
-        matrix.insert(0, 4, 1 - 3);
+        matrix.put(0, 0, 3 - 3);
+        matrix.put(0, 1, 5 - 3);
+        matrix.put(0, 3, 4 - 3);
+        matrix.put(0, 4, 1 - 3);
 
-        matrix.insert(1, 0, 4 - 3);
-        matrix.insert(1, 2, 1 - 3);
-        matrix.insert(1, 3, 2 - 3);
-        matrix.insert(1, 5, 4 - 3);
+        matrix.put(1, 0, 4 - 3);
+        matrix.put(1, 2, 1 - 3);
+        matrix.put(1, 3, 2 - 3);
+        matrix.put(1, 5, 4 - 3);
 
-        matrix.insert(2, 1, 3 - 3);
-        matrix.insert(2, 2, 2 - 3);
-        matrix.insert(2, 3, 5 - 3);
-        matrix.insert(2, 4, 2 - 3);
+        matrix.put(2, 1, 3 - 3);
+        matrix.put(2, 2, 2 - 3);
+        matrix.put(2, 3, 5 - 3);
+        matrix.put(2, 4, 2 - 3);
 
         var users = matrix.getUserIds();
         for (int user_id = 0; user_id < 3; ++user_id) {
@@ -145,6 +142,5 @@ public class RatingMatrix {
         System.out.println(booksFromUser0.contains(3));
         System.out.println(booksFromUser0.contains(4));
         System.out.println(!booksFromUser0.contains(5));
-
     }
 }
