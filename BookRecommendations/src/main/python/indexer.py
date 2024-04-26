@@ -36,7 +36,7 @@ async def indexBooks():
     async with aiohttp.ClientSession() as session:
         for i in range(1, NUM_LIST_PAGES, INCREMENTAL):
             last = min(i+INCREMENTAL, NUM_LIST_PAGES+1)
-            log(f"[STATUS] Indexing book list pages {i} to {last-1}")
+            log(f"[STATUS] Indexing book list pages {i} to {last-1} (out of {NUM_LIST_PAGES})")
             tasks = [asyncio.ensure_future(indexBookList(pageNumber, session)) for pageNumber in range(i, last)]
             await asyncio.gather(*tasks)
 
@@ -79,7 +79,11 @@ async def indexBook(URL, session):
             return
 
     # Get title
-    result["title"] = mainContent.find("h1", class_="Text Text__title1").text
+    try:
+        result["title"] = mainContent.find("h1", class_="Text Text__title1").text
+    except:
+        log(f"[FATAL] Book title not found on {URL}")
+        raise Exception()
 
     # Get abstract
     abstract = mainContent.find("div", class_="DetailsLayoutRightParagraph__widthConstrained")
@@ -107,18 +111,20 @@ async def indexBook(URL, session):
     result["numRatings"] = numRatings
     result["numReviews"] = numReviews
     # print(URL)
+
+
+    result["id"] = URLtoID(URL)
     addBookToIndex(result)
 
 def addBookToIndex(data):
-    # data["id"] = numIndexedBooks
     # client.index(index=getenv("ES_INDEX"),
-    #          id=numIndexedBooks,
+    #          id=numIndexedBooks,      # =data["id"]
     #          document=data)
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
 
-numTotalRequests = 0
 async def fetch(session, url, loggedin=False):
+    # start = time.time()
     status = 404
     attempts = 0
     cookies = {}
@@ -127,13 +133,14 @@ async def fetch(session, url, loggedin=False):
         cookies = COOKIES
     repeatedExceptions = False
     while status != 200 and attempts < 5:
-        global numTotalRequests
-        numTotalRequests += 1
+        updateProgressRequests()
         try:
             async with session.get(url, cookies=cookies) as response:
                 text = await response.text()
                 status = response.status
                 if status == 200:
+                    # elapsed = time.time() - start
+                    # log(f"Fetch {url} took {elapsed}")
                     return text
                 attempts += 1
                 if (status != 502 and status != 504) or attempts > 1:
@@ -152,16 +159,23 @@ async def fetch(session, url, loggedin=False):
 FRIEND_DEPTH = 0
 async def indexUsers():
     log("[STATUS] Starting user indexing...")
-    async with aiohttp.ClientSession() as session:
-        userIDs = getUserIDs()
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=200)) as session:
+        userIDs = await getUserIDs(session)
         addProgressGoalUsers(len(userIDs))
-        tasks = [asyncio.ensure_future(indexUser(session, userID, FRIEND_DEPTH)) for userID in userIDs]
-        await asyncio.gather(*tasks)
+        # tasks = [asyncio.ensure_future(indexUser(session, userID, FRIEND_DEPTH)) for userID in userIDs]
+        # await asyncio.gather(*tasks)
+        for userID in userIDs:
+            await indexUser(session, userID, FRIEND_DEPTH)
 
-def getUserIDs():
+async def getUserIDs(session):
     # Retrieved from top users in the world for "this" week (https://www.goodreads.com/user/best_reviewers?country=all&duration=w)
-    return [53701594, 29005117, 113964939, 32879029, 22106879, 5599497, 124132123, 16958299, 151231754, 6431467, 49815208, 48328025, 3569327, 138801181, 4622890, 128034500, 149694522, 60866073, 19283284, 154684875, 142072672, 22189348, 10490224, 82156089, 42130592, 89100122, 10171516, 1720620, 29981066, 48727754, 1323413, 27304766, 11215896, 150076375, 91622714, 30181442, 66222749, 13427823, 106675807, 80549046, 156768790, 11345366, 120762651, 138277086, 148600677, 11701608, 4674014, 8114361, 10477405, 4125660, 59458347, 54835325, 25400887, 134523072, 151334777, 721595, 117399210, 3672777, 78009594, 137111152, 1151637, 39575951, 107658832, 89964678, 26560207, 155007415, 38610813, 142245488, 35794399, 110912303, 104791668, 70395042, 5032725, 2190064, 142709713, 8338960, 1232712, 151638606, 91520258, 11626803, 11284813, 1526851, 77509618, 5009669, 60964126, 129743582, 3978225, 41321285, 112332654, 103654355, 67861858, 45147300, 17119647, 2846645, 128403534, 161893172, 42926711, 110612670]
-    # page = await fetch(session)
+    # return [53701594, 29005117, 113964939, 32879029, 22106879, 5599497, 124132123, 16958299, 151231754, 6431467, 49815208, 48328025, 3569327, 138801181, 4622890, 128034500, 149694522, 60866073, 19283284, 154684875, 142072672, 22189348, 10490224, 82156089, 42130592, 89100122, 10171516, 1720620, 29981066, 48727754, 1323413, 27304766, 11215896, 150076375, 91622714, 30181442, 66222749, 13427823, 106675807, 80549046, 156768790, 11345366, 120762651, 138277086, 148600677, 11701608, 4674014, 8114361, 10477405, 4125660, 59458347, 54835325, 25400887, 134523072, 151334777, 721595, 117399210, 3672777, 78009594, 137111152, 1151637, 39575951, 107658832, 89964678, 26560207, 155007415, 38610813, 142245488, 35794399, 110912303, 104791668, 70395042, 5032725, 2190064, 142709713, 8338960, 1232712, 151638606, 91520258, 11626803, 11284813, 1526851, 77509618, 5009669, 60964126, 129743582, 3978225, 41321285, 112332654, 103654355, 67861858, 45147300, 17119647, 2846645, 128403534, 161893172, 42926711, 110612670]
+    page = await fetch(session, "https://www.goodreads.com/user/best_reviewers?country=all&duration=w", loggedin=True)
+    soup = BeautifulSoup(page, "html.parser")
+    entries = soup.find("table", class_="tableList").find_all("tr")
+    ids = [URLtoID(entry.find_all("td")[2].find_all("a")[0]["href"]) for entry in entries]
+    # print(ids)
+    return ids
 
 async def indexUser(session, userID, depth):
     tasks = [indexUserRatings(session, userID), getFriendIDs(session, userID, depth)]
@@ -174,9 +188,15 @@ async def indexUser(session, userID, depth):
 
 async def indexUserRatings(session, userID):
     numPages = await getUserRatingPages(session, userID)
+    # log(f"user {userID} has {numPages} pages")
+    if (numPages == 0):
+        log(f"{userID} is private")
+        return
+    tasks = [indexUserRatingsPage(session, userID, page) for page in range(1, numPages+1)]
+    await asyncio.gather(*tasks)
 
 async def getUserRatingPages(session, userID):
-    page = await fetch(session, f"https://www.goodreads.com/review/list/{userID}?page=1&per_page=100&sort=rating&utf8=%E2%9C%93&view=reviews", loggedin=True)
+    page = await fetch(session, f"https://www.goodreads.com/review/list/{userID}?page=1&per_page=100&shelf=read&utf8=✓&view=reviews", loggedin=True)
     soup = BeautifulSoup(page, "html.parser")
     pagination = soup.find("div", id="reviewPagination")
     if pagination is None:  # User has either just one page or is private
@@ -185,21 +205,76 @@ async def getUserRatingPages(session, userID):
             # log(f"{userID} has only 1 page..?")
             return 1
         else:
-            log(f"{userID} is private")
             return 0
     pages = pagination.find_all("a")
     lastPage = pages[-2].text
     return int(lastPage)
 
+RATING = {
+    "did not like it": 1,
+    "it was ok" : 2,
+    "liked it" : 3,
+    "really liked it" : 4,
+    "it was amazing" : 5
+}
+def ratingToInt(rating):
+    return RATING[rating]
+
 async def indexUserRatingsPage(session, userID, pageNumber):
-    print("indexing")
+    # log(f"fetyching {userID} page {pageNumber}")
+    page = await fetch(session, f"https://www.goodreads.com/review/list/{userID}?page={pageNumber}&per_page=100&shelf=read&utf8=✓&view=reviews", loggedin=True)
+    # start = time.time()
+    soup = BeautifulSoup(page, "html.parser")
+    entries = soup.find("tbody", id="booksBody").find_all("tr")
+    for entry in entries:
+        data = {}
+        data["userID"] = userID
+        data["bookID"] = URLtoID(entry.find("div", class_="js-tooltipTrigger tooltipTrigger").find("a")["href"])
+        try:
+            title = entry.find("td", class_="field title").find("a").text
+            data["title"] = title.strip().split("\n")[0]
+        except:
+            log(f"unable to find title on user {userID} page {pageNumber} book {data['bookID']}")
+            raise Exception()
+        # print(f"from {title.encode()} to {data['title']}")
+        try:
+            author = entry.find("td", class_="field author").find("a").text.split(", ")
+        except:
+            # log(f"unable to find author on user {userID} page {pageNumber} book {data['title']}")
+            return  # no author, illegitimate, skip
+        if (len(author) == 1):
+            data["author"] = author[0]
+        elif (len(author) == 2):
+            data["author"] = author[1] + " " + author[0]
+        elif (len(author) == 3):
+            data["author"] = author[1] + " " + author[0] + " " + author[2]
+        else:
+            log(f"weird author review user {userID} page {pageNumber}: {', '.join(author)}")
+        rating = entry.find("td", class_="field rating").find_all("span", class_="staticStar")[0].text
+        # print(rating)
+        if (rating == ""):
+            # log(f"dropping {userID} page {pageNumber} book {data['title']} by {data['author']}")
+            continue
+        data["rating"] = ratingToInt(rating)
+        # print(str(userID) + " " + str(pageNumber))
+        addRatingToIndex(data)
+    # elapsed = time.time() - start
+    # log(f"[STATUS] Processed user {userID} page {pageNumber}, took {elapsed}")
+
+def addRatingToIndex(data):
+    # client.index(index="ratings",
+    #          document=data)
+    # print(data)
+    return
 
 async def getFriendIDs(session, userID, depth):
     if (depth <= 0):
         return []
     print("getting friends")
-    return "lmaomqdowdm"
 
+
+def URLtoID(URL):
+    return int(URL.split("/")[-1].split("-")[0].split(".")[0])
 
 
 ### Progress printing ###
@@ -210,6 +285,11 @@ numTotalBooks = 0
 numProgressUsers = 0
 numErrorUsers = 0
 numTotalUsers = 0
+numTotalRequests = 0
+def updateProgressRequests():
+    global numTotalRequests
+    numTotalRequests += 1
+    printProgress()
 def updateProgressBooks():
     global numProgressBooks
     numProgressBooks += 1
@@ -248,8 +328,13 @@ def log(msg):
 async def main():
     timeStart = time.time()
     printProgress()
-    await indexBooks()
-    await indexUsers()
+    tasks = [
+        indexBooks(),
+        indexUsers()
+    ]
+    await asyncio.gather(*tasks)
+    # await indexBooks()
+    # await indexUsers()
     timeEnd = time.time()
     timeElapsed = timeEnd - timeStart
     print()
