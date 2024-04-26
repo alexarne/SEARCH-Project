@@ -246,7 +246,6 @@ public class BookSearchUi extends JFrame {
 
                             /* Update rating matrix for user. */
                             ratingMatrix.put(user.getId(), currBook.getId(), rating);
-                            System.out.println(ratingMatrix.getRating(user.getId(), currBook.getId()));
                             
                             for (int k = 0; k < 5; k++) {
                                 starBoxes[k].setIcon(rating >= (k+1) ? new ImageIcon(fullStar) : new ImageIcon(emptyStar));
