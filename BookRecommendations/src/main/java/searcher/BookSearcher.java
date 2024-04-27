@@ -1,3 +1,7 @@
+/**
+ * ElasticSearch-based searcher class for the engine
+ */
+
 package searcher;
 
 import java.io.IOException;
@@ -7,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.net.ssl.SSLContext;
@@ -46,6 +51,9 @@ public class BookSearcher {
         this.indexName = indexName;
     }
 
+    /**
+     * Connect to the elasticsearch client
+     */
     private ElasticsearchClient getClient(String host, int port, String fingerprint, String password) {
         SSLContext sslContext = TransportUtils.sslContextFromCaFingerprint(fingerprint);
         BasicCredentialsProvider credsProv = new BasicCredentialsProvider();
@@ -61,82 +69,9 @@ public class BookSearcher {
         return new ElasticsearchClient(transport);
     }
 
-    /*private Map<Integer, Double> getBoostedScores(List<Hit<Book>> hits, UserProfile user) {
-        Map<Integer, Double> boosts = new HashMap<>();
-        List<UserProfile> similarUsers = user.getSimilarUsers();*/
-
-        /* Test user similarity. */
-        /*if (!user.getRatings().isEmpty()) {
-            List<Book> books = hits.stream().map(hit -> hit.source()).toList();
-            similarUsers = UserProfile.getSimilarUsers(books, 10); // Compare ratings to 10 randomly generated users.
-            List<Double> simScores = user.getSimilarityScores(similarUsers);
-
-            for (Hit<Book> hit : hits) {
-                int bookId = hit.source().getId();
-                boosts.put(bookId, hit.score());
-
-                for (int i = 0; i < similarUsers.size(); ++i) {
-                    boosts.put(bookId, boosts.get(bookId) + 1e2*simScores.get(i)*similarUsers.get(i).getRating(bookId));
-                }
-            }
-            return boosts;
-        }
-
-        for (Hit<Book> hit : hits) {
-            int bookId = hit.source().getId();
-            boosts.put(bookId, hit.score());
-            for (UserProfile sim : similarUsers) {
-                boosts.put(bookId, boosts.get(bookId) + sim.getRating(bookId));
-            }
-        }
-        return boosts;
-    }*/
-
-    /*public List<Book> searchBooks(String queryTerms, QueryType queryType, UserProfile user) throws IOException {
-        Query byTitle = MatchQuery.of(m -> m
-                .field("title")
-                .query(queryTerms)
-        )._toQuery();
-        Query byAbstract = MatchQuery.of(m -> m
-                .field("abstr")
-                .query(queryTerms)
-        )._toQuery();
-        Query byTitlePhrase = MatchPhraseQuery.of(m -> m
-                .field("title")
-                .query(queryTerms)
-        )._toQuery();
-        Query byAbstractPhrase = MatchPhraseQuery.of(m -> m
-                .field("abstr")
-                .query(queryTerms)
-        )._toQuery();
-        SearchResponse<Book> response = esClient.search(s -> s
-                        .index(indexName)
-                        .query(q -> q
-                                .bool(b -> b
-                                        .should(byTitle)
-                                        .should(byAbstract)
-                                        .should(byTitlePhrase)
-                                        .should(byAbstractPhrase)
-                                ))
-                        .size(SEARCH_LIMIT),
-                Book.class);
-        List<Hit<Book>> hits = response.hits().hits();
-        List<Book> results = new ArrayList<>();
-        for (Hit<Book> hit : hits) {
-            results.add(hit.source());
-        }
-        if (queryType == QueryType.USER_QUERY) {
-            Map<Integer, Double> boostedScores = getBoostedScores(hits, user);
-            results.sort(new Comparator<Book>() {
-                @Override
-                public int compare(Book b1, Book b2) {
-                    return (int)Math.signum(boostedScores.get(b2.getId()) - boostedScores.get(b1.getId()));
-                }
-            });
-        }
-        return results;
-    }*/
-
+    /**
+     * Sends given query to elasticsearch client and processes results
+     */
     public List<Book> searchBooks(String queryTerms, QueryType queryType, DisplayType displayType, UserProfile user, RatingMatrix ratingMatrix, Similarity similarity) throws IOException {
         Query byTitle = MatchQuery.of(m -> m
                 .field("title")
@@ -187,7 +122,7 @@ public class BookSearcher {
         List<Hit<Book>> hits = response.hits().hits();
         List<Book> results = new ArrayList<>();
         for (Hit<Book> hit : hits) {
-            if (displayType == DisplayType.SHOW_READ_BOOKS || (user.getRating(hit.source().getId()) == 0))  results.add(hit.source());
+            if (displayType == DisplayType.SHOW_READ_BOOKS || (user.getRating(Objects.requireNonNull(hit.source()).getId()) == 0))  results.add(hit.source());
         }
         if (queryType == QueryType.USER_QUERY && !user.getRatings().isEmpty()) {
             Set<Integer> similarUserIds = new HashSet<>();
@@ -199,7 +134,6 @@ public class BookSearcher {
                 }
             }
             similarUserIds.remove(user.getId()); // Remove current user from similar users.
-            //List<UserProfile> similarUsers = similarUserIds.stream().map(book_id -> new UserProfile(book_id)).toList();
             List<Integer> similarUsers = new ArrayList<>(similarUserIds);
 
             Map<Integer, Double> boostedScores = getBoostedScores(hits, user, similarUsers, ratingMatrix, similarity);
@@ -222,18 +156,21 @@ public class BookSearcher {
         }
 
         for (Hit<Book> hit : hits) {
-            int bookId = hit.source().getId();
-            boosts.put(bookId, hit.score());
-
-            for (int i = 0; i < similarUsers.size(); ++i) {
-                boosts.put(bookId, boosts.get(bookId) + boostFunction(simScores.get(i), ratingMatrix.getRating(similarUsers.get(i), bookId)));
+            if (hit.source() != null) {
+                int bookId = hit.source().getId();
+                boosts.put(bookId, hit.score());
+                for (int i = 0; i < similarUsers.size(); ++i) {
+                    boosts.put(bookId, boosts.get(bookId) + boostFunction(simScores.get(i), ratingMatrix.getRating(similarUsers.get(i), bookId)));
+                }
             }
         }
         return boosts;
     }
 
+    /**
+     * Boosting function for given user similarity score and book rating
+     */
     private double boostFunction(double simScore, double rating) {
-        double boost = 1e6*simScore*(rating-3);
-        return boost;
+        return 1e6*simScore*(rating-3);
     }
 }

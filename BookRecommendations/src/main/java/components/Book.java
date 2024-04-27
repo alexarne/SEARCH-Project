@@ -1,3 +1,7 @@
+/**
+ * Book object
+ */
+
 package components;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -45,11 +49,6 @@ public class Book {
 
     public double getRating() {
         return rating;
-    }
-
-    @Override
-    public String toString() {
-        return this.title + " by " + this.author + " (" + rating + " stars)";
     }
 
     @Override

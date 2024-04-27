@@ -1,3 +1,7 @@
+/**
+ * Main class for the search engine + GUI
+ */
+
 package ui;
 
 import components.Book;
@@ -54,50 +58,52 @@ public class BookSearchUi extends JFrame {
 
     JRadioButtonMenuItem testProfile4Item = new JRadioButtonMenuItem("Test profile 4");
 
-    JRadioButtonMenuItem showMyBooksItem = new JRadioButtonMenuItem("Yes");
-    JRadioButtonMenuItem hideMyBooksItem = new JRadioButtonMenuItem("No");
-
-    int MAX_DISPLAY_RESULTS = 99;
-
-    int TEST_PROFILE1_ID = 32879029;
-    int TEST_PROFILE2_ID = 151231754;
-    int TEST_PROFILE3_ID = 6431467;
-    int TEST_PROFILE4_ID = 4622890;
-
     JRadioButtonMenuItem userItem = new JRadioButtonMenuItem("User query");
     JRadioButtonMenuItem neutralItem = new JRadioButtonMenuItem("Neutral query");
+
+    JRadioButtonMenuItem showMyBooksItem = new JRadioButtonMenuItem("Yes");
+    JRadioButtonMenuItem hideMyBooksItem = new JRadioButtonMenuItem("No");
     private Font font = new Font("Arial", Font.BOLD, 16);
 
-    String emptyStarIconFile = "./images/starempty.png";
-    String fullStarIconFile = "./images/starfull.png";
-    String logoFile = "./images/logo.png";
+    private String emptyStarIconFile = "./images/starempty.png";
+    private String fullStarIconFile = "./images/starfull.png";
+    private String logoFile = "./images/logo.png";
 
-    BufferedImage emptyStar;
-    BufferedImage fullStar;
-    BookSearcher searcher;
+    private BufferedImage emptyStar;
+    private BufferedImage fullStar;
 
-    List<Book> currentResultList;
+    private final int FRAME_WIDTH = 600;
+    private final int FRAME_HEIGHT = 650;
 
-    QueryType queryType;
-    DisplayType displayType;
+    private final int PANE_HEIGHT = 450;
 
-    UserProfile user;
+    private final int NUMBER_WIDTH = 30;
+    private final int TITLE_WIDTH = 200;
+    private final int AUTHOR_WIDTH = 150;
+    private final int RATING_WIDTH = 70;
+    private final int STARS_WIDTH = 100;
+    private final int DISPLAY_HEIGHT = 20;
+    private final int PADDING = 30;
+
+    private BookSearcher searcher;
+    private List<Book> currentResultList;
+
+    private QueryType queryType;
+    private DisplayType displayType;
+
+    private UserProfile user;
 
     private RatingMatrix ratingMatrix;
     private Similarity similarity;
 
-    final int FRAME_WIDTH = 600;
-    final int FRAME_HEIGHT = 650;
+    private String RATINGS_FILE = "./ratings.json";
 
-    final int PANE_HEIGHT = 450;
+    private final int MAX_DISPLAY_RESULTS = 99;
 
-    final int NUMBER_WIDTH = 30;
-    final int TITLE_WIDTH = 200;
-    final int AUTHOR_WIDTH = 150;
-    final int RATING_WIDTH = 70;
-    final int STARS_WIDTH = 100;
-    final int DISPLAY_HEIGHT = 20;
-    final int PADDING = 30;
+    private final int TEST_PROFILE1_ID = 32879029;
+    private final int TEST_PROFILE2_ID = 151231754;
+    private final int TEST_PROFILE3_ID = 6431467;
+    private final int TEST_PROFILE4_ID = 4622890;
 
     public BookSearchUi() {
         init();
@@ -106,6 +112,11 @@ public class BookSearchUi extends JFrame {
     void init() {
         Dotenv dotenv = Dotenv.configure().load();
         searcher = new BookSearcher("localhost", 9200, dotenv.get("ES_FINGERPRINT"), dotenv.get("ES_PASSWORD"), dotenv.get("ES_INDEX"));
+        user = new UserProfile();
+
+        initRatingMatrix();
+        initSimilarity();
+
         try {
             emptyStar = ImageIO.read(new File(emptyStarIconFile));
             fullStar = ImageIO.read(new File(fullStarIconFile));
@@ -140,11 +151,66 @@ public class BookSearchUi extends JFrame {
         displayReadMenu.add(showMyBooksItem);
         displayReadMenu.add(hideMyBooksItem);
 
+        Action reset = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                user.resetRatings();
+                testProfile1Item.setSelected(false);
+                testProfile2Item.setSelected(false);
+                testProfile3Item.setSelected(false);
+                testProfile4Item.setSelected(false);
+            }
+        };
+        resetItem.addActionListener(reset);
+        Action quit = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        };
+        quitItem.addActionListener(quit);
+
+        Action testProfile1 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                testProfile2Item.setSelected(false);
+                testProfile3Item.setSelected(false);
+                testProfile4Item.setSelected(false);
+                user = new UserProfile(TEST_PROFILE1_ID);
+                user.loadRatings(ratingMatrix);
+            }
+        };
+        testProfile1Item.addActionListener(testProfile1);
+        Action testProfile2 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                testProfile1Item.setSelected(false);
+                testProfile3Item.setSelected(false);
+                testProfile4Item.setSelected(false);
+                user = new UserProfile(TEST_PROFILE2_ID);
+                user.loadRatings(ratingMatrix);
+            }
+        };
+        testProfile2Item.addActionListener(testProfile2);
+        Action testProfile3 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                testProfile1Item.setSelected(false);
+                testProfile2Item.setSelected(false);
+                testProfile4Item.setSelected(false);
+                user = new UserProfile(TEST_PROFILE3_ID);
+                user.loadRatings(ratingMatrix);
+            }
+        };
+        testProfile3Item.addActionListener(testProfile3);
+        Action testProfile4 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                testProfile1Item.setSelected(false);
+                testProfile2Item.setSelected(false);
+                testProfile3Item.setSelected(false);
+                user = new UserProfile(TEST_PROFILE4_ID);
+                user.loadRatings(ratingMatrix);
+            }
+        };
+        testProfile4Item.addActionListener(testProfile4);
+
         userItem.setSelected(true);
         queryType = QueryType.USER_QUERY;
-
-        hideMyBooksItem.setSelected(true);
-        displayType = DisplayType.HIDE_READ_BOOKS;
         Action chooseUserItem = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 neutralItem.setSelected(false);
@@ -160,6 +226,8 @@ public class BookSearchUi extends JFrame {
         };
         neutralItem.addActionListener(chooseNeutralItem);
 
+        hideMyBooksItem.setSelected(true);
+        displayType = DisplayType.HIDE_READ_BOOKS;
         Action chooseShowReadItem = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 hideMyBooksItem.setSelected(false);
@@ -213,77 +281,6 @@ public class BookSearchUi extends JFrame {
                 "",
                 KeyStroke.getKeyStroke("ENTER"),
                 JComponent.WHEN_FOCUSED);
-
-        Action reset = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                user.resetRatings();
-                testProfile1Item.setSelected(false);
-                testProfile2Item.setSelected(false);
-                testProfile3Item.setSelected(false);
-                testProfile4Item.setSelected(false);
-            }
-        };
-
-        resetItem.addActionListener(reset);
-
-        Action testProfile1 = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                testProfile2Item.setSelected(false);
-                testProfile3Item.setSelected(false);
-                testProfile4Item.setSelected(false);
-                user = new UserProfile(TEST_PROFILE1_ID);
-                user.loadRatings(ratingMatrix);
-            }
-        };
-
-        testProfile1Item.addActionListener(testProfile1);
-
-        Action testProfile2 = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                testProfile1Item.setSelected(false);
-                testProfile3Item.setSelected(false);
-                testProfile4Item.setSelected(false);
-                user = new UserProfile(TEST_PROFILE2_ID);
-                user.loadRatings(ratingMatrix);
-            }
-        };
-
-        testProfile2Item.addActionListener(testProfile2);
-
-        Action testProfile3 = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                testProfile1Item.setSelected(false);
-                testProfile2Item.setSelected(false);
-                testProfile4Item.setSelected(false);
-                user = new UserProfile(TEST_PROFILE3_ID);
-                user.loadRatings(ratingMatrix);
-            }
-        };
-
-        testProfile3Item.addActionListener(testProfile3);
-
-        Action testProfile4 = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                testProfile1Item.setSelected(false);
-                testProfile2Item.setSelected(false);
-                testProfile3Item.setSelected(false);
-                user = new UserProfile(TEST_PROFILE4_ID);
-                user.loadRatings(ratingMatrix);
-            }
-        };
-
-        testProfile4Item.addActionListener(testProfile4);
-        Action quit = new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                System.exit(0);
-            }
-        };
-        quitItem.addActionListener(quit);
-
-        user = new UserProfile();
-
-        initRatingMatrix();
-        initSimilarity();
     }
 
     /**
@@ -292,16 +289,16 @@ public class BookSearchUi extends JFrame {
     private void initRatingMatrix() {
         ratingMatrix = new RatingMatrix();
         JSONArray ratingEntries;
-        File userFile = new File( "ratings.json");
+        File userFile = new File( RATINGS_FILE);
         try (FileReader reader = new FileReader(userFile)) {
             JSONParser parser = new JSONParser () ;
             ratingEntries = (JSONArray) parser.parse(reader);
+            for (Object entry : ratingEntries) {
+                JSONObject jsonEntry = (JSONObject) entry;
+                ratingMatrix.put((int) (long) jsonEntry.get("userID"), (int) (long) jsonEntry.get("bookID"), (int) (long) jsonEntry.get("rating"));
+            }
         } catch (IOException | ParseException e) {
             throw new RuntimeException(e);
-        }
-        for (Object entry : ratingEntries) {
-            JSONObject jsonEntry = (JSONObject) entry;
-            ratingMatrix.put((int) (long) jsonEntry.get("userID"), (int) (long) jsonEntry.get("bookID"), (int) (long) jsonEntry.get("rating"));
         }
     }
 
@@ -326,6 +323,9 @@ public class BookSearchUi extends JFrame {
         repaint();
     }
 
+    /**
+     * Display search results
+     */
     void displayResults(double elapsedTime) {
         resultWindow.removeAll();
         displayInfoText(String.format(" Found %d book(s) in %.3f seconds", currentResultList.size(), elapsedTime));

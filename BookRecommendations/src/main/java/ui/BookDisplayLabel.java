@@ -1,3 +1,7 @@
+/**
+ * Label for each component in book's search result display
+ */
+
 package ui;
 
 import javax.swing.*;
