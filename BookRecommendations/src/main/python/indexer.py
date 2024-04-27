@@ -6,6 +6,7 @@ from elasticsearch import Elasticsearch
 from os import getenv
 from dotenv import load_dotenv
 import time
+import json
 
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
@@ -19,6 +20,8 @@ client = Elasticsearch(
   ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
   basic_auth=("elastic", getenv("ES_PASSWORD"))
 )
+
+ratings_list = []
 
 if client.indices.exists(index=getenv("ES_INDEX")):
   client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
@@ -273,6 +276,8 @@ async def indexUserRatingsPage(session, userID, pageNumber):
     # log(f"[STATUS] Processed user {userID} page {pageNumber}, took {elapsed}")
 
 def addRatingToIndex(data):
+    ratings_list.append(data)
+    writeRatings()
     # client.index(index="ratings",
     #          document=data)
     # print(data)
@@ -336,6 +341,10 @@ def log(msg):
     print("\r" + msg + " "*(90-len(msg)))
     printProgress()
 
+def writeRatings():
+    with open("BookRecommendations/ratings.json", "w") as f:
+        f.write(json.dumps(ratings_list))
+
 async def main():
     timeStart = time.time()
     printProgress()
@@ -346,6 +355,7 @@ async def main():
     await asyncio.gather(*tasks)
     # await indexBooks()
     # await indexUsers()
+    writeRatings()
     timeEnd = time.time()
     timeElapsed = timeEnd - timeStart
     print()

@@ -3,6 +3,10 @@ package ui;
 import components.Book;
 import components.UserProfile;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import searcher.BookSearcher;
 import similarity.CosineSimilarity;
 import similarity.RatingMatrix;
@@ -22,6 +26,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -37,6 +42,18 @@ public class BookSearchUi extends JFrame {
     JMenu optionsMenu = new JMenu("Search options");
     JMenuItem quitItem = new JMenuItem("Quit");
     JMenuItem resetItem = new JMenuItem("Reset user");
+    JMenuItem testProfile1Item = new JMenuItem("Test profile 1");
+    JMenuItem testProfile2Item = new JMenuItem("Test profile 2");
+
+    JMenuItem testProfile3Item = new JMenuItem("Test profile 3");
+
+    JMenuItem testProfile4Item = new JMenuItem("Test profile 4");
+
+    int TEST_PROFILE1_ID = 32879029;
+    int TEST_PROFILE2_ID = 151231754;
+    int TEST_PROFILE3_ID = 6431467;
+    int TEST_PROFILE4_ID = 4622890;
+
     JRadioButtonMenuItem userItem = new JRadioButtonMenuItem("User query");
     JRadioButtonMenuItem neutralItem = new JRadioButtonMenuItem("Neutral query");
     private Font font = new Font("Arial", Font.BOLD, 16);
@@ -101,6 +118,10 @@ public class BookSearchUi extends JFrame {
         menuBar.add(optionsMenu);
         fileMenu.add(quitItem);
         fileMenu.add(resetItem);
+        fileMenu.add(testProfile1Item);
+        fileMenu.add(testProfile2Item);
+        fileMenu.add(testProfile3Item);
+        fileMenu.add(testProfile4Item);
         optionsMenu.add(userItem);
         optionsMenu.add(neutralItem);
 
@@ -169,6 +190,46 @@ public class BookSearchUi extends JFrame {
         };
 
         resetItem.addActionListener(reset);
+
+        Action testProfile1 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                user = new UserProfile(TEST_PROFILE1_ID);
+                user.loadRatings(ratingMatrix);
+                testProfile1Item.setSelected(false);
+            }
+        };
+
+        testProfile1Item.addActionListener(testProfile1);
+
+        Action testProfile2 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                user = new UserProfile(TEST_PROFILE2_ID);
+                user.loadRatings(ratingMatrix);
+                testProfile2Item.setSelected(false);
+            }
+        };
+
+        testProfile2Item.addActionListener(testProfile2);
+
+        Action testProfile3 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                user = new UserProfile(TEST_PROFILE3_ID);
+                user.loadRatings(ratingMatrix);
+                testProfile3Item.setSelected(false);
+            }
+        };
+
+        testProfile3Item.addActionListener(testProfile3);
+
+        Action testProfile4 = new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                user = new UserProfile(TEST_PROFILE4_ID);
+                user.loadRatings(ratingMatrix);
+                testProfile4Item.setSelected(false);
+            }
+        };
+
+        testProfile4Item.addActionListener(testProfile4);
         Action quit = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 System.exit(0);
@@ -187,9 +248,18 @@ public class BookSearchUi extends JFrame {
      */
     private void initRatingMatrix() {
         ratingMatrix = new RatingMatrix();
-        // Fill matrix with data from index.
-        // e.g:
-        // ratingMatrix.put(user_id, book_id, rating);
+        JSONArray ratingEntries;
+        File userFile = new File( "ratings.json");
+        try (FileReader reader = new FileReader(userFile)) {
+            JSONParser parser = new JSONParser () ;
+            ratingEntries = (JSONArray) parser.parse(reader);
+        } catch (IOException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+        for (Object entry : ratingEntries) {
+            JSONObject jsonEntry = (JSONObject) entry;
+            ratingMatrix.put((int) (long) jsonEntry.get("userID"), (int) (long) jsonEntry.get("bookID"), (int) (long) jsonEntry.get("rating"));
+        }
     }
 
     /**

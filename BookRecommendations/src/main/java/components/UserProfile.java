@@ -58,6 +58,12 @@ public class UserProfile {
         return user_id;
     }
 
+    public void loadRatings(RatingMatrix ratingMatrix) {
+        for (Map.Entry<Integer, Double> entry : ratingMatrix.getEntrySetFromUser(user_id)) {
+            setRating(entry.getKey(), (int)Math.round(entry.getValue()));
+        }
+    }
+
     public List<UserProfile> getSimilarUsers() {
         List<UserProfile> test = new ArrayList<>();
         UserProfile user1 = new UserProfile();

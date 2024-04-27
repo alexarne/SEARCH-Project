@@ -13,8 +13,10 @@ public class Book {
     private int numRatings;
     private int numReviews;
 
+    private String[] genres;
+
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
-    public Book(@JsonProperty("id") int id, @JsonProperty("title") String title, @JsonProperty("abstr") String abstr, @JsonProperty("author") String author, @JsonProperty("rating") double rating, @JsonProperty("numRatings") int numRatings, @JsonProperty("numReviews") int numReviews) {
+    public Book(@JsonProperty("id") int id, @JsonProperty("title") String title, @JsonProperty("abstr") String abstr, @JsonProperty("author") String author, @JsonProperty("rating") double rating, @JsonProperty("numRatings") int numRatings, @JsonProperty("numReviews") int numReviews, @JsonProperty("genres") String[] genres) {
         this.id = id;
         this.title = title;
         this.abstr = abstr;
@@ -22,6 +24,7 @@ public class Book {
         this.rating = rating;
         this.numRatings = numRatings;
         this.numReviews = numReviews;
+        this.genres = genres;
     }
 
     public int getId() {
