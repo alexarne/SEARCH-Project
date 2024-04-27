@@ -141,27 +141,46 @@ public class BookSearcher {
         Query byTitle = MatchQuery.of(m -> m
                 .field("title")
                 .query(queryTerms)
-        )._toQuery();
-        Query byAbstract = MatchQuery.of(m -> m
-                .field("abstr")
-                .query(queryTerms)
+                .fuzziness("2")
         )._toQuery();
         Query byTitlePhrase = MatchPhraseQuery.of(m -> m
                 .field("title")
                 .query(queryTerms)
         )._toQuery();
+        Query byAbstract = MatchQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+                .fuzziness("2")
+        )._toQuery();
         Query byAbstractPhrase = MatchPhraseQuery.of(m -> m
                 .field("abstr")
                 .query(queryTerms)
+        )._toQuery();
+        Query byAuthor = MatchQuery.of(m -> m
+                .field("author")
+                .query(queryTerms)
+                .fuzziness("2")
+        )._toQuery();
+        Query byAuthorPhrase = MatchPhraseQuery.of(m -> m
+                .field("author")
+                .query(queryTerms)
+        )._toQuery();
+        Query byGenre = MatchQuery.of(m -> m
+                .field("genres")
+                .query(queryTerms)
+                .fuzziness("2")
         )._toQuery();
         SearchResponse<Book> response = esClient.search(s -> s
                         .index(indexName)
                         .query(q -> q
                                 .bool(b -> b
                                         .should(byTitle)
-                                        .should(byAbstract)
                                         .should(byTitlePhrase)
+                                        .should(byAbstract)
                                         .should(byAbstractPhrase)
+                                        .should(byAuthor)
+                                        .should(byAuthorPhrase)
+                                        .should(byGenre)
                                 ))
                         .size(SEARCH_LIMIT),
                 Book.class);

@@ -330,7 +330,7 @@ public class BookSearchUi extends JFrame {
         resultWindow.removeAll();
         displayInfoText(String.format(" Found %d book(s) in %.3f seconds", currentResultList.size(), elapsedTime));
         int i;
-        for (i = 0; i < MAX_DISPLAY_RESULTS; i++) {
+        for (i = 0; i < Math.min(MAX_DISPLAY_RESULTS, currentResultList.size()); i++) {
             final Book currBook = currentResultList.get(i);
             JPanel bookToShow = new JPanel();
             bookToShow.setAlignmentX(Component.LEFT_ALIGNMENT);
