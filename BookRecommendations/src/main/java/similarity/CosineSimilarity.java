@@ -6,20 +6,23 @@ import java.util.function.DoubleFunction;
  * Author: Erik Lidbjörk.
  * Date 2024.
  * 
- * RatingMatrix with the capability to 
- * compute cosine similarities between users.
+ * Compute cosine similarities between users from 
+ * a RatingMatrix. 
  */
-public class RatingMatrixCosineSimilarity extends RatingMatrix implements Similarity {
+public class CosineSimilarity implements Similarity {
+    private RatingMatrix ratingMarix;
+
+    public CosineSimilarity(RatingMatrix ratingMatrix) {
+        this.ratingMarix = ratingMatrix;
+    }
+
     /**
      * Dot product between user A and B. 
      */
     private double dot(int user_id_A, int user_id_B) {
-        var bookScoresA = userToBookScore.get(user_id_A);
-        var bookScoresB = userToBookScore.get(user_id_B);
-        
         /* Iterate over both users.*/
-        var iterA = bookScoresA.entrySet().iterator();
-        var iterB = bookScoresB.entrySet().iterator();
+        var iterA = ratingMarix.getEntrySetFromUser(user_id_A).iterator();
+        var iterB = ratingMarix.getEntrySetFromUser(user_id_B).iterator();
 
         double dotProduct = 0d;
         var entryA = iterA.next();
@@ -32,12 +35,16 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
             if (!iterA.hasNext() && !iterB.hasNext()) {
                 return dotProduct;
             }
-            if (entryA.getKey() == entryB.getKey()) {
-                entryA = iterA.next();
+            if (!iterA.hasNext()) {
                 entryB = iterB.next();
+            } else if (!iterB.hasNext()) {
+                entryA = iterA.next();
             } else if (entryA.getKey() < entryB.getKey()) {
                 entryA = iterA.next();
+            } else if (entryA.getKey() > entryB.getKey()) {
+                entryB = iterB.next();
             } else {
+                entryA = iterA.next();
                 entryB = iterB.next();
             }
         }   
@@ -47,9 +54,9 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
      * Get length of vector with specified metric.
      */
     private double length(int user_id, DoubleFunction<Double> metric) {
-        var bookScores = userToBookScore.get(user_id);
+        var bookScores = ratingMarix.getRatingsFromUser(user_id);
         double len = 0d; 
-        for (double rating : bookScores.values()) {
+        for (double rating : bookScores){
             len += metric.apply(rating);
         }
         return len;
@@ -123,7 +130,6 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
         return simAssymetric(user_id_A, user_id_B, rating -> Math.abs(rating));
     }
 
-
     /**
      * Default similarity score is symmetric with euclidean norm. 
      * Override this method to use something else for the 
@@ -139,28 +145,29 @@ public class RatingMatrixCosineSimilarity extends RatingMatrix implements Simila
      * Test class with mock data.
      */
     public static void main(String[] args) {
-        var matrix = new RatingMatrixCosineSimilarity();
+        var matrix = new RatingMatrix();
 
         /* Insert 3 users, each having rated 4 books out of 6 books, into the matrix. */
-        matrix.insert(0, 0, 3 - 3);
-        matrix.insert(0, 1, 5 - 3);
-        matrix.insert(0, 3, 4 - 3);
-        matrix.insert(0, 4, 1 - 3);
+        matrix.put(0, 0, 3 - 3);
+        matrix.put(0, 1, 5 - 3);
+        matrix.put(0, 3, 4 - 3);
+        matrix.put(0, 4, 1 - 3);
 
-        matrix.insert(1, 0, 4 - 3);
-        matrix.insert(1, 2, 1 - 3);
-        matrix.insert(1, 3, 2 - 3);
-        matrix.insert(1, 5, 4 - 3);
+        matrix.put(1, 0, 4 - 3);
+        matrix.put(1, 2, 1 - 3);
+        matrix.put(1, 3, 2 - 3);
+        matrix.put(1, 5, 4 - 3);
 
-        matrix.insert(2, 1, 3 - 3);
-        matrix.insert(2, 2, 2 - 3);
-        matrix.insert(2, 3, 5 - 3);
-        matrix.insert(2, 4, 2 - 3);
+        matrix.put(2, 1, 3 - 3);
+        matrix.put(2, 2, 2 - 3);
+        matrix.put(2, 3, 5 - 3);
+        matrix.put(2, 4, 2 - 3);
 
         /* Sim should be equal to expectedSim. */
-        var sim01 = matrix.simEuclidean(0,1);
-        var sim02 = matrix.simEuclidean(0,2);
-        var sim12 = matrix.simEuclidean(1,2);
+        var sim = new CosineSimilarity(matrix);
+        var sim01 = sim.simEuclidean(0,1);
+        var sim02 = sim.simEuclidean(0,2);
+        var sim12 = sim.simEuclidean(1,2);
 
         double len0 = 0*0 + 2*2 + 1*1 + (-2)*(-2);
         double len1 = 1*1 + (-2)*(-2) + (-1)*(-1) + 1*1;

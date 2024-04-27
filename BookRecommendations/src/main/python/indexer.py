@@ -14,12 +14,15 @@ NUM_LIST_PAGES = 100
 ELASTIC_INSERT_URL = "https://localhost:9200/"
 
 load_dotenv()
-# client = Elasticsearch(
-#   ELASTIC_INSERT_URL,
-#   ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
-#   basic_auth=("elastic", getenv("ES_PASSWORD"))
-# )
-# client.indices.create(index=getenv("ES_INDEX"))
+client = Elasticsearch(
+  ELASTIC_INSERT_URL,
+  ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
+  basic_auth=("elastic", getenv("ES_PASSWORD"))
+)
+
+if client.indices.exists(index=getenv("ES_INDEX")):
+  client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
+client.indices.create(index=getenv("ES_INDEX"))
 
 COOKIES = {
     'ubid-main': getenv("COOKIES_UBID_MAIN"),
@@ -120,14 +123,14 @@ async def indexBook(URL, session):
     result["numReviews"] = numReviews
     # print(URL)
 
-
     result["id"] = URLtoID(URL)
     addBookToIndex(result)
 
+numIndexedBooks = 0
 def addBookToIndex(data):
-    # client.index(index=getenv("ES_INDEX"),
-    #          id=numIndexedBooks,      # =data["id"]
-    #          document=data)
+    client.index(index=getenv("ES_INDEX"),
+             id=data["id"],
+             document=data)
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
 

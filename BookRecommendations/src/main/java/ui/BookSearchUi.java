@@ -4,6 +4,9 @@ import components.Book;
 import components.UserProfile;
 import io.github.cdimascio.dotenv.Dotenv;
 import searcher.BookSearcher;
+import similarity.CosineSimilarity;
+import similarity.RatingMatrix;
+import similarity.Similarity;
 import components.QueryType;
 
 import javax.imageio.ImageIO;
@@ -51,6 +54,9 @@ public class BookSearchUi extends JFrame {
     QueryType queryType;
 
     UserProfile user;
+
+    private RatingMatrix ratingMatrix;
+    private Similarity similarity;
 
     final int FRAME_WIDTH = 600;
     final int FRAME_HEIGHT = 650;
@@ -140,7 +146,8 @@ public class BookSearchUi extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 try {
                     long startTime = System.currentTimeMillis();
-                    currentResultList = searcher.searchBooks(queryWindow.getText().toLowerCase().trim(), queryType, user);
+                    //currentResultList = searcher.searchBooks(queryWindow.getText().toLowerCase().trim(), queryType, user);
+                    currentResultList = searcher.searchBooks(queryWindow.getText().toLowerCase().trim(), queryType, user, ratingMatrix, similarity);
                     long elapsedTime = System.currentTimeMillis() - startTime;
                     displayResults(elapsedTime / 1000.0);
                 } catch (
@@ -170,6 +177,30 @@ public class BookSearchUi extends JFrame {
         quitItem.addActionListener(quit);
 
         user = new UserProfile();
+
+        initRatingMatrix();
+        initSimilarity();
+    }
+
+    /**
+     * Fill rating matrix between all users on goodreads.
+     */
+    private void initRatingMatrix() {
+        ratingMatrix = new RatingMatrix();
+        // Fill matrix with data from index.
+        // e.g:
+        // ratingMatrix.put(user_id, book_id, rating);
+    }
+
+    /**
+     * Setup similarity.
+     */
+    private void initSimilarity() {
+        Similarity cosineSimilarity = new CosineSimilarity(ratingMatrix);
+        //Similarity similarityMatrix = new SimilarityMatrix(cosineSimilarity, user.getId(), ratingMatrix.getUserIds());
+
+        similarity = cosineSimilarity;
+        //similarity = similarityMatrix;
     }
 
     // To use for errors, like when we get no results.
@@ -212,6 +243,10 @@ public class BookSearchUi extends JFrame {
                     public void itemStateChanged(ItemEvent e) {
                         if (e.getStateChange() == ItemEvent.SELECTED) {
                             user.setRating(currBook, rating);
+
+                            /* Update rating matrix for user. */
+                            ratingMatrix.put(user.getId(), currBook.getId(), rating);
+                            
                             for (int k = 0; k < 5; k++) {
                                 starBoxes[k].setIcon(rating >= (k+1) ? new ImageIcon(fullStar) : new ImageIcon(emptyStar));
                                 if ((k+1) != rating) starBoxes[k].setSelected(false);
