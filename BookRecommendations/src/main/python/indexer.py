@@ -13,6 +13,7 @@ GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?
 GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=all&duration=w"
 NUM_LIST_PAGES = 100
 ELASTIC_INSERT_URL = "https://localhost:9200/"
+RATINGS_FILE = "BookRecommendations/ratings.json"
 
 load_dotenv()
 client = Elasticsearch(
@@ -85,8 +86,10 @@ async def indexBook(URL, session):
             return
 
     # Get genre
-    genreList = soup.find("ul", class_="CollapsableList").find_all("span", class_="BookPageMetadataSection__genreButton")
-    result["genres"] = [entry.find("a").find("span").text for entry in genreList]
+    genreList = soup.find("ul", class_="CollapsableList")
+    if (genreList != None):
+        genreList = genreList.find_all("span", class_="BookPageMetadataSection__genreButton")
+        result["genres"] = [entry.find("a").find("span").text for entry in genreList]
     # print(URL)
     # print(genres)
 
@@ -277,7 +280,6 @@ async def indexUserRatingsPage(session, userID, pageNumber):
 
 def addRatingToIndex(data):
     ratings_list.append(data)
-    writeRatings()
     # client.index(index="ratings",
     #          document=data)
     # print(data)
@@ -342,7 +344,7 @@ def log(msg):
     printProgress()
 
 def writeRatings():
-    with open("BookRecommendations/ratings.json", "w") as f:
+    with open(RATINGS_FILE, "w") as f:
         f.write(json.dumps(ratings_list))
 
 async def main():
