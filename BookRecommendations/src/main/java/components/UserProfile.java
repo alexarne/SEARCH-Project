@@ -64,7 +64,7 @@ public class UserProfile {
         }
     }
 
-    public List<UserProfile> getSimilarUsers() {
+    /*public List<UserProfile> getSimilarUsers() {
         List<UserProfile> test = new ArrayList<>();
         UserProfile user1 = new UserProfile();
         user1.setRating(916,2);
@@ -75,19 +75,19 @@ public class UserProfile {
         user2.setRating(780,-2);
         test.add(user2);
         return test;
-    }
+    }*/
 
     /**
      * Test method.
      * Return a List of length numUsers containing UserProfiles 
      * having randomly rated each book in books between 1-5.
      */
-    public static List<UserProfile> getSimilarUsers(List<Book> books, int numUsers) {
+    /*public static List<UserProfile> getSimilarUsers(List<Book> books, int numUsers) {
         List<UserProfile> similarUsers = new ArrayList<>();
-        Random rng = new Random();
+        Random rng = new Random();*/
 
         /* Let numUsers rate each book randomly. */
-        for (int i = 0; i < numUsers; ++i) {
+        /*for (int i = 0; i < numUsers; ++i) {
             var u = new UserProfile(i + 1); // Set ids from 1 to numUsers.
             for (var book : books) {
                 int rating = rng.nextInt(5) + 1;
@@ -96,7 +96,7 @@ public class UserProfile {
             similarUsers.add(u);
         }
         return similarUsers;
-    }
+    }*/
 
     /** 
      * Test method.

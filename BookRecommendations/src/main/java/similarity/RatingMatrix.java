@@ -51,7 +51,7 @@ public class RatingMatrix {
      * Get rating of user book pair.
      */
     public double getRating(int user_id, int book_id) {
-        return userToBookScore.get(user_id).get(book_id);
+        return userToBookScore.get(user_id).getOrDefault(book_id, 0.0);
     }
 
     /**
