@@ -86,13 +86,11 @@ async def indexBook(URL, session):
                 updateErrorsBooks()
                 return
 
-    # Get genre
-    genreList = soup.find("ul", class_="CollapsableList")
-    if (genreList != None):
-        genreList = genreList.find_all("span", class_="BookPageMetadataSection__genreButton")
+        # Get genre
+        genreList = soup.find("ul", class_="CollapsableList").find_all("span", class_="BookPageMetadataSection__genreButton")
         result["genres"] = [entry.find("a").find("span").text for entry in genreList]
-    # print(URL)
-    # print(genres)
+        # print(URL)
+        # print(genres)
 
         # Get title
         try:
