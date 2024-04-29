@@ -67,23 +67,24 @@ async def getBookURLs(pageNumber, session):
     return URLs
 
 async def indexBook(URL, session):
-    # print(f"Indexing components {URL}")
-    page = await fetch(session, URL)
-    soup = BeautifulSoup(page, "html.parser")
-    # print(soup.prettify())
-    result = {}
-
-    # Isolate metadata
-    mainContent = soup.find("div", class_="BookPage__mainContent")
-    if mainContent is None:     # Book is potentially private for offline users
-        # log(f"[RETRY BOOK]: Book may be private: {URL}")
-        page = await fetch(session, URL, loggedin=True)
+    try:
+        # print(f"Indexing components {URL}")
+        page = await fetch(session, URL)
         soup = BeautifulSoup(page, "html.parser")
+        # print(soup.prettify())
+        result = {}
+
+        # Isolate metadata
         mainContent = soup.find("div", class_="BookPage__mainContent")
-        if mainContent is None:
-            log(f"[ERROR]: Book not found: {URL}")
-            updateErrorsBooks()
-            return
+        if mainContent is None:     # Book is potentially private for offline users
+            # log(f"[RETRY BOOK]: Book may be private: {URL}")
+            page = await fetch(session, URL, loggedin=True)
+            soup = BeautifulSoup(page, "html.parser")
+            mainContent = soup.find("div", class_="BookPage__mainContent")
+            if mainContent is None:
+                log(f"[ERROR]: Book not found: {URL}")
+                updateErrorsBooks()
+                return
 
     # Get genre
     genreList = soup.find("ul", class_="CollapsableList")
@@ -93,44 +94,47 @@ async def indexBook(URL, session):
     # print(URL)
     # print(genres)
 
-    # Get title
-    try:
-        result["title"] = mainContent.find("h1", class_="Text Text__title1").text
+        # Get title
+        try:
+            result["title"] = mainContent.find("h1", class_="Text Text__title1").text
+        except:
+            log(f"[RETRY] Book title not found on {URL}")
+            indexBook(URL, session)
+            return
+            # raise Exception()
+
+        # Get abstract
+        abstract = mainContent.find("div", class_="DetailsLayoutRightParagraph__widthConstrained")
+        if abstract is None:
+            print(f"crash point abstract on {URL}")
+        for br in abstract.find_all("br"):
+            br.replace_with("\n")
+        result["abstr"] = abstract.text
+
+        # Get author (assuming just one, reason: https://www.goodreads.com/components/show/7190.The_Three_Musketeers)
+        authorSection = mainContent.find("div", class_="BookPageMetadataSection__contributor")
+        author = authorSection.find("span", class_="ContributorLink__name")
+        result["author"] = author.text
+
+        # Get rating
+        rating = float(mainContent.find("div", class_="RatingStatistics__rating").text)
+        result["rating"] = rating
+
+        # Get number of ratings and reviews
+        numRatingsAndReviewsSection = mainContent.find("div", class_="RatingStatistics__meta")
+        numRatingsAndReviews = numRatingsAndReviewsSection.find_all("span")
+        numRatings, numReviews = numRatingsAndReviews[0].text, numRatingsAndReviews[1].text
+        numRatings = int(numRatings.replace("ratings", "").replace("rating", "").strip().replace(",", ""))
+        numReviews = int(numReviews.replace("reviews", "").replace("review", "").strip().replace(",", ""))
+        result["numRatings"] = numRatings
+        result["numReviews"] = numReviews
+        # print(URL)
+
+        result["id"] = URLtoID(URL)
+        addBookToIndex(result)
     except:
-        log(f"[RETRY] Book title not found on {URL}")
+        log(f"[RETRY] Error indexing {URL}")
         indexBook(URL, session)
-        return
-        # raise Exception()
-
-    # Get abstract
-    abstract = mainContent.find("div", class_="DetailsLayoutRightParagraph__widthConstrained")
-    if abstract is None:
-        print(f"crash point abstract on {URL}")
-    for br in abstract.find_all("br"):
-        br.replace_with("\n")
-    result["abstr"] = abstract.text
-
-    # Get author (assuming just one, reason: https://www.goodreads.com/components/show/7190.The_Three_Musketeers)
-    authorSection = mainContent.find("div", class_="BookPageMetadataSection__contributor")
-    author = authorSection.find("span", class_="ContributorLink__name")
-    result["author"] = author.text
-
-    # Get rating
-    rating = float(mainContent.find("div", class_="RatingStatistics__rating").text)
-    result["rating"] = rating
-
-    # Get number of ratings and reviews
-    numRatingsAndReviewsSection = mainContent.find("div", class_="RatingStatistics__meta")
-    numRatingsAndReviews = numRatingsAndReviewsSection.find_all("span")
-    numRatings, numReviews = numRatingsAndReviews[0].text, numRatingsAndReviews[1].text
-    numRatings = int(numRatings.replace("ratings", "").replace("rating", "").strip().replace(",", ""))
-    numReviews = int(numReviews.replace("reviews", "").replace("review", "").strip().replace(",", ""))
-    result["numRatings"] = numRatings
-    result["numReviews"] = numReviews
-    # print(URL)
-
-    result["id"] = URLtoID(URL)
-    addBookToIndex(result)
 
 numIndexedBooks = 0
 def addBookToIndex(data):
