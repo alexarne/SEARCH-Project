@@ -6,12 +6,18 @@ from elasticsearch import Elasticsearch
 from os import getenv
 from dotenv import load_dotenv
 import time
+import json
 
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
 GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=all&duration=w"
 NUM_LIST_PAGES = 100
 ELASTIC_INSERT_URL = "https://localhost:9200/"
+RATINGS_FILE = "BookRecommendations/ratings.json"
+TEST_PROFILE1_ID = 164001102
+TEST_PROFILE2_ID = 177735400
+TEST_PROFILE3_ID = 176668697
+TEST_PROFILE4_ID = 177774603
 
 load_dotenv()
 client = Elasticsearch(
@@ -19,6 +25,8 @@ client = Elasticsearch(
   ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
   basic_auth=("elastic", getenv("ES_PASSWORD"))
 )
+
+ratings_list = []
 
 if client.indices.exists(index=getenv("ES_INDEX")):
   client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
@@ -190,6 +198,7 @@ async def getUserIDs(session):
     entries = soup.find("table", class_="tableList").find_all("tr")
     ids = [URLtoID(entry.find_all("td")[2].find_all("a")[0]["href"]) for entry in entries]
     # print(ids)
+    ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
     return ids
 
 async def indexUser(session, userID, depth):
@@ -277,6 +286,7 @@ async def indexUserRatingsPage(session, userID, pageNumber):
     # log(f"[STATUS] Processed user {userID} page {pageNumber}, took {elapsed}")
 
 def addRatingToIndex(data):
+    ratings_list.append(data)
     # client.index(index="ratings",
     #          document=data)
     # print(data)
@@ -340,6 +350,10 @@ def log(msg):
     print("\r" + msg + " "*(90-len(msg)))
     printProgress()
 
+def writeRatings():
+    with open(RATINGS_FILE, "w") as f:
+        f.write(json.dumps(ratings_list))
+
 async def main():
     timeStart = time.time()
     printProgress()
@@ -350,6 +364,7 @@ async def main():
     await asyncio.gather(*tasks)
     # await indexBooks()
     # await indexUsers()
+    writeRatings()
     timeEnd = time.time()
     timeElapsed = timeEnd - timeStart
     print()
