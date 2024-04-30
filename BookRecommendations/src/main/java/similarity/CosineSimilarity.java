@@ -29,7 +29,7 @@ public class CosineSimilarity implements Similarity {
         var entryB = iterB.next();
         /* Union search, linear scan. */
         while (true) {
-            if (entryA.getKey() == entryB.getKey()) {
+            if (entryA.getKey().equals(entryB.getKey())) {
                 dotProduct += entryA.getValue() * entryB.getValue();
             }
             if (!iterA.hasNext() && !iterB.hasNext()) {
