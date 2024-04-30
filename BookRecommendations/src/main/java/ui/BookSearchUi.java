@@ -100,10 +100,10 @@ public class BookSearchUi extends JFrame {
 
     private final int MAX_DISPLAY_RESULTS = 99;
 
-    private final int TEST_PROFILE1_ID = 32879029;
-    private final int TEST_PROFILE2_ID = 151231754;
-    private final int TEST_PROFILE3_ID = 6431467;
-    private final int TEST_PROFILE4_ID = 4622890;
+    private final int TEST_PROFILE1_ID = 164001102;
+    private final int TEST_PROFILE2_ID = 177735400;
+    private final int TEST_PROFILE3_ID = 176668697;
+    private final int TEST_PROFILE4_ID = 177774603;
 
     public BookSearchUi() {
         init();

@@ -14,6 +14,10 @@ GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=
 NUM_LIST_PAGES = 100
 ELASTIC_INSERT_URL = "https://localhost:9200/"
 RATINGS_FILE = "BookRecommendations/ratings.json"
+TEST_PROFILE1_ID = 164001102
+TEST_PROFILE2_ID = 177735400
+TEST_PROFILE3_ID = 176668697
+TEST_PROFILE4_ID = 177774603
 
 load_dotenv()
 client = Elasticsearch(
@@ -194,6 +198,7 @@ async def getUserIDs(session):
     entries = soup.find("table", class_="tableList").find_all("tr")
     ids = [URLtoID(entry.find_all("td")[2].find_all("a")[0]["href"]) for entry in entries]
     # print(ids)
+    ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
     return ids
 
 async def indexUser(session, userID, depth):
