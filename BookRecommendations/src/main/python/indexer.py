@@ -13,7 +13,7 @@ GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?
 GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=all&duration=w"
 NUM_LIST_PAGES = 100
 ELASTIC_INSERT_URL = "https://localhost:9200/"
-RATINGS_FILE = "BookRecommendations/ratings.json"
+RATINGS_FILE = "ratings.json"
 TEST_PROFILE1_ID = 164001102
 TEST_PROFILE2_ID = 177735400
 TEST_PROFILE3_ID = 176668697
