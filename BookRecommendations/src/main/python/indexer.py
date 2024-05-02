@@ -7,11 +7,14 @@ from os import getenv
 from dotenv import load_dotenv
 import time
 import json
+import requests
 
+USE_ELASTIC = False
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
 GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=all&duration=w"
 NUM_LIST_PAGES = 100
+FRIEND_DEPTH = 1
 ELASTIC_INSERT_URL = "https://localhost:9200/"
 RATINGS_FILE = "ratings.json"
 TEST_PROFILE1_ID = 164001102
@@ -20,22 +23,22 @@ TEST_PROFILE3_ID = 176668697
 TEST_PROFILE4_ID = 177774603
 
 load_dotenv()
-client = Elasticsearch(
-  ELASTIC_INSERT_URL,
-  ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
-  basic_auth=("elastic", getenv("ES_PASSWORD"))
-)
-
-ratings_list = []
-
-if client.indices.exists(index=getenv("ES_INDEX")):
-  client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
-client.indices.create(index=getenv("ES_INDEX"))
-
 COOKIES = {
     'ubid-main': getenv("COOKIES_UBID_MAIN"),
     'at-main': getenv("COOKIES_AT_MAIN"),
 }
+
+if USE_ELASTIC:
+    client = Elasticsearch(
+        ELASTIC_INSERT_URL,
+        ssl_assert_fingerprint = getenv("ES_FINGERPRINT"),
+        basic_auth=("elastic", getenv("ES_PASSWORD"))
+    )
+    if client.indices.exists(index=getenv("ES_INDEX")):
+        client.options(ignore_status=[400,404]).indices.delete(index=getenv("ES_INDEX")) 
+    client.indices.create(index=getenv("ES_INDEX"))
+
+ratings_list = []
 
 
 
@@ -44,7 +47,7 @@ COOKIES = {
 async def indexBooks():
     log("[STATUS] Starting book indexing...")
     INCREMENTAL = 5
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=30)) as session:
         for i in range(1, NUM_LIST_PAGES, INCREMENTAL):
             last = min(i+INCREMENTAL, NUM_LIST_PAGES+1)
             log(f"[STATUS] Indexing book list pages {i} to {last-1} (out of {NUM_LIST_PAGES})")
@@ -90,6 +93,21 @@ async def indexBook(URL, session):
                 updateErrorsBooks()
                 return
 
+        # Get series
+        try:
+            series = soup.find("h3", class_="Text Text__title3 Text__italic Text__regular Text__subdued").find("a").text
+            log(f"series {URL}")
+            log(series)
+            # print(series.text)
+            try:
+                series = series[0:series.index("#")].strip()
+            except: 
+                pass
+            result["series"] = series
+            log(series)
+        except:
+            result["series"] = ""
+
         # Get genre
         genreList = soup.find("ul", class_="CollapsableList").find_all("span", class_="BookPageMetadataSection__genreButton")
         result["genres"] = [entry.find("a").find("span").text for entry in genreList]
@@ -101,7 +119,7 @@ async def indexBook(URL, session):
             result["title"] = mainContent.find("h1", class_="Text Text__title1").text
         except:
             log(f"[RETRY] Book title not found on {URL}")
-            indexBook(URL, session)
+            await indexBook(URL, session)
             return
             # raise Exception()
 
@@ -136,53 +154,55 @@ async def indexBook(URL, session):
         addBookToIndex(result)
     except:
         log(f"[RETRY] Error indexing {URL}")
-        indexBook(URL, session)
+        await indexBook(URL, session)
 
 numIndexedBooks = 0
 def addBookToIndex(data):
-    client.index(index=getenv("ES_INDEX"),
-             id=data["id"],
-             document=data)
+    if USE_ELASTIC:
+        client.index(index=getenv("ES_INDEX"),
+                id=data["id"],
+                document=data)
     # print("Indexed book " + data["title"] + " by " + data["author"])
     updateProgressBooks()
 
 async def fetch(session, url, loggedin=False):
     # start = time.time()
-    status = 404
-    attempts = 0
-    cookies = {}
-    if (loggedin):
-        # log(f"Using cookies on {url}")
-        cookies = COOKIES
-    repeatedExceptions = False
-    while status != 200 and attempts < 5:
-        updateProgressRequests()
-        try:
-            async with session.get(url, cookies=cookies) as response:
-                text = await response.text()
-                status = response.status
-                if status == 200:
-                    # elapsed = time.time() - start
-                    # log(f"Fetch {url} took {elapsed}")
-                    return text
-                attempts += 1
-                if (status != 502 and status != 504) or attempts > 1:
-                    log(f"[RETRY FETCH]: {status} on {url}")
-        except:
-            if (repeatedExceptions):
-                log(f"[RETRY FETCH]: Threw repeated exception on {url}")
-            repeatedExceptions = True
-            await asyncio.sleep(5)
-    log(f"[FATAL]: Fetch failed after multiple attempts on {url}")
+    async with aiohttp.ClientSession() as session2:
+        status = 404
+        attempts = 0
+        cookies = {}
+        if (loggedin):
+            # log(f"Using cookies on {url}")
+            cookies = COOKIES
+        repeatedExceptions = False
+        while status != 200 and attempts < 5:
+            updateProgressRequests()
+            try:
+                async with session.get(url, cookies=cookies) as response:
+                    # log(f"sent {url}")
+                    text = await response.text()
+                    status = response.status
+                    if status == 200:
+                        # elapsed = time.time() - start
+                        # log(f"Received response {url}")
+                        return text
+                    attempts += 1
+                    if (status != 502 and status != 504) or attempts > 1:
+                        log(f"[RETRY FETCH]: {status} on {url}")
+            except:
+                if (repeatedExceptions):
+                    log(f"[RETRY FETCH]: Threw repeated exception on {url}")
+                repeatedExceptions = True
+                await asyncio.sleep(5)
+        log(f"[FATAL]: Fetch failed after multiple attempts on {url}")
 
 
 
 ### User scraping ###
 
-FRIEND_DEPTH = 0
 async def indexUsers():
     log("[STATUS] Starting user indexing...")
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=200)) as session:
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=30)) as session:
         userIDs = await getUserIDs(session)
         addProgressGoalUsers(len(userIDs))
         # tasks = [asyncio.ensure_future(indexUser(session, userID, FRIEND_DEPTH)) for userID in userIDs]
@@ -198,7 +218,7 @@ async def getUserIDs(session):
     entries = soup.find("table", class_="tableList").find_all("tr")
     ids = [URLtoID(entry.find_all("td")[2].find_all("a")[0]["href"]) for entry in entries]
     # print(ids)
-    ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
+    # ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
     return ids
 
 async def indexUser(session, userID, depth):
@@ -207,14 +227,16 @@ async def indexUser(session, userID, depth):
     updateProgressUsers()
     friendIDs = values[1]
     addProgressGoalUsers(len(friendIDs))
-    recursive = [indexUser(session, ID, depth-1) for ID in friendIDs]
-    await asyncio.gather(*recursive)
+    for friendID in friendIDs:
+        await indexUser(session, friendID, depth-1)
+    # recursive = [indexUser(session, ID, depth-1) for ID in friendIDs]
+    # await asyncio.gather(*recursive)
 
 async def indexUserRatings(session, userID):
     numPages = await getUserRatingPages(session, userID)
     # log(f"user {userID} has {numPages} pages")
     if (numPages == 0):
-        log(f"{userID} is private")
+        # log(f"{userID} is private")
         return
     tasks = [indexUserRatingsPage(session, userID, page) for page in range(1, numPages+1)]
     await asyncio.gather(*tasks)
@@ -286,7 +308,7 @@ async def indexUserRatingsPage(session, userID, pageNumber):
     # log(f"[STATUS] Processed user {userID} page {pageNumber}, took {elapsed}")
 
 def addRatingToIndex(data):
-    ratings_list.append(data)
+    # ratings_list.append(data)
     # client.index(index="ratings",
     #          document=data)
     # print(data)
@@ -295,8 +317,12 @@ def addRatingToIndex(data):
 async def getFriendIDs(session, userID, depth):
     if (depth <= 0):
         return []
-    print("getting friends")
-
+    page = await fetch(session, f"https://www.goodreads.com/user/show/{userID}", loggedin=True)
+    soup = BeautifulSoup(page, "html.parser")
+    friends = soup.find_all("div", class_="friendName")
+    friendIDs = [URLtoID(friend.find("a")["href"]) for friend in friends]
+    # log(f"{userID} is friends with {*friendIDs,}")
+    return friendIDs
 
 def URLtoID(URL):
     return int(URL.split("/")[-1].split("-")[0].split(".")[0])
@@ -355,27 +381,31 @@ def writeRatings():
         f.write(json.dumps(ratings_list))
 
 async def main():
-    timeStart = time.time()
     printProgress()
     tasks = [
         indexBooks(),
-        indexUsers()
+        # indexUsers()
     ]
     await asyncio.gather(*tasks)
     # await indexBooks()
     # await indexUsers()
-    writeRatings()
-    timeEnd = time.time()
-    timeElapsed = timeEnd - timeStart
-    print()
+    # writeRatings()
     global numErrorBooks
-    print(f"Non-existing books: {numErrorBooks}")
-    minutes = int(timeElapsed / 60)
-    seconds = int(timeElapsed % 60)
-    print(f"Elapsed time: {minutes}m {seconds}s")
+    log(f"Non-existing books: {numErrorBooks}")
+
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    timeStart = time.time()
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
+    timeEnd = time.time()
+    timeElapsed = timeEnd - timeStart
+    print()
+    minutes = int(timeElapsed / 60)
+    seconds = int(timeElapsed % 60)
+    print(f"Elapsed time: {minutes}m {seconds}s")
 
