@@ -12,15 +12,15 @@ This is a book recommendation search engine based on book and user data scraped 
 
 ### Installation
 
-1. Clone the repo and enter the project folder
+1. Clone the repo and enter the project folder.
 ```sh
    git clone git@github.com:alexarne/SEARCH-Project.git
    cd BookRecommendations
    ```
 
-2. Configure environment variables
+2. Configure environment variables.
 
-Create a `.env` file with the lines
+Create a `.env` file with the following lines.
 ```shell
 ES_FINGERPRINT=
 ES_PASSWORD=
@@ -30,9 +30,9 @@ COOKIES_AT_MAIN=
 ```
 `ES_FINGERPRINT` and `ES_PASSWORD` should correspond to the HTTP CA certificate SHA-256 fingerprint and elastic user password respectively from the output of the ElasticSearch set-up. `ES_INDEX` should be the name of the ElasticSearch index to store the Goodreads data. `COOKIES_UBID_MAIN` and `COOKIES_AT_MAIN` should correspond to the Goodreads account cookies.  
 
-3. Run ElasticSearch on `localhost` port `9200`
+3. Run ElasticSearch on `localhost` port `9200`.
 
-4. Scrape the Goodreads data
+4. Scrape the Goodreads data.
 
 Use `pip` or `conda` to install the requirements `src/main/python/requirements.txt`.
 
@@ -41,9 +41,11 @@ Run the scraper.
 python3 src/main/python/indexer.py
 ```
 
-5. Run the search engine
+5. Run the search engine.
 
-```mvn clean compile exec:java```
+```
+mvn clean compile exec:java
+```
 
 ### Usage
 
