@@ -109,8 +109,11 @@ async def indexBook(URL, session):
             result["series"] = ""
 
         # Get genre
-        genreList = soup.find("ul", class_="CollapsableList").find_all("span", class_="BookPageMetadataSection__genreButton")
-        result["genres"] = [entry.find("a").find("span").text for entry in genreList]
+        try:
+            genreList = soup.find("ul", class_="CollapsableList").find_all("span", class_="BookPageMetadataSection__genreButton")
+            result["genres"] = [entry.find("a").find("span").text for entry in genreList]
+        except:
+            result["genres"] = []
         # print(URL)
         # print(genres)
 
@@ -384,9 +387,13 @@ async def main():
     printProgress()
     tasks = [
         indexBooks(),
-        # indexUsers()
+        indexUsers()
     ]
     await asyncio.gather(*tasks)
+
+    # async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=30)) as session:
+    #     await indexBook("https://www.goodreads.com/book/show/20293019-manga---hentai-anime-and-manga", session)
+
     # await indexBooks()
     # await indexUsers()
     # writeRatings()
