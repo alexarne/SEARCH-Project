@@ -18,6 +18,7 @@ import javax.net.ssl.SSLContext;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -77,45 +78,105 @@ public class BookSearcher {
                 .field("title")
                 .query(queryTerms)
                 .fuzziness("2")
+                .boost(1.0F)
+        )._toQuery();
+        Query byTitleAnd = MatchQuery.of(m -> m
+                .field("title")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+                .operator(Operator.And)
         )._toQuery();
         Query byTitlePhrase = MatchPhraseQuery.of(m -> m
                 .field("title")
                 .query(queryTerms)
+                .boost(1.0F)
         )._toQuery();
         Query byAbstract = MatchQuery.of(m -> m
                 .field("abstr")
                 .query(queryTerms)
                 .fuzziness("2")
+                .boost(1.0F)
+        )._toQuery();
+        Query byAbstractAnd = MatchQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+                .operator(Operator.And)
         )._toQuery();
         Query byAbstractPhrase = MatchPhraseQuery.of(m -> m
                 .field("abstr")
                 .query(queryTerms)
+                .boost(1.0F)
         )._toQuery();
         Query byAuthor = MatchQuery.of(m -> m
                 .field("author")
                 .query(queryTerms)
                 .fuzziness("2")
+                .boost(1.0F)
+        )._toQuery();
+        Query byAuthorAnd = MatchQuery.of(m -> m
+                .field("author")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+                .operator(Operator.And)
         )._toQuery();
         Query byAuthorPhrase = MatchPhraseQuery.of(m -> m
                 .field("author")
                 .query(queryTerms)
+                .boost(1.0F)
+        )._toQuery();
+        Query bySeries = MatchQuery.of(m -> m
+                .field("series")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+        )._toQuery();
+        Query bySeriesAnd = MatchQuery.of(m -> m
+                .field("series")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query bySeriesPhrase = MatchPhraseQuery.of(m -> m
+                .field("series")
+                .query(queryTerms)
+                .boost(1.0F)
         )._toQuery();
         Query byGenre = MatchQuery.of(m -> m
                 .field("genres")
                 .query(queryTerms)
                 .fuzziness("2")
+                .boost(1.0F)
+        )._toQuery();
+        Query byGenreAnd = MatchQuery.of(m -> m
+                .field("genres")
+                .query(queryTerms)
+                .fuzziness("2")
+                .boost(1.0F)
+                .operator(Operator.And)
         )._toQuery();
         SearchResponse<Book> response = esClient.search(s -> s
                         .index(indexName)
                         .query(q -> q
                                 .bool(b -> b
                                         .should(byTitle)
+                                        .should(byTitleAnd)
                                         .should(byTitlePhrase)
                                         .should(byAbstract)
+                                        .should(byAbstractAnd)
                                         .should(byAbstractPhrase)
                                         .should(byAuthor)
+                                        .should(byAuthorAnd)
                                         .should(byAuthorPhrase)
+                                        .should(bySeries)
+                                        .should(bySeriesAnd)
+                                        .should(bySeriesPhrase)
                                         .should(byGenre)
+                                        .should(byGenreAnd)
                                 ))
                         .size(SEARCH_LIMIT),
                 Book.class);
