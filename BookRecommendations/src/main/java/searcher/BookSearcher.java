@@ -77,14 +77,25 @@ public class BookSearcher {
         Query byTitle = MatchQuery.of(m -> m
                 .field("title")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.7F)
+        )._toQuery();
+        Query byTitleFuzzy = MatchQuery.of(m -> m
+                .field("title")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.07F)
         )._toQuery();
         Query byTitleAnd = MatchQuery.of(m -> m
                 .field("title")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.7F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query byTitleAndFuzzy = MatchQuery.of(m -> m
+                .field("title")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.07F)
                 .operator(Operator.And)
         )._toQuery();
         Query byTitlePhrase = MatchPhraseQuery.of(m -> m
@@ -95,14 +106,25 @@ public class BookSearcher {
         Query byAbstract = MatchQuery.of(m -> m
                 .field("abstr")
                 .query(queryTerms)
-                .fuzziness("2")
                 .boost(1.0F)
+        )._toQuery();
+        Query byAbstractFuzzy = MatchQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.1F)
         )._toQuery();
         Query byAbstractAnd = MatchQuery.of(m -> m
                 .field("abstr")
                 .query(queryTerms)
-                .fuzziness("2")
                 .boost(1.0F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query byAbstractAndFuzzy = MatchQuery.of(m -> m
+                .field("abstr")
+                .query(queryTerms)
+                .boost(0.1F)
+                .fuzziness("1")
                 .operator(Operator.And)
         )._toQuery();
         Query byAbstractPhrase = MatchPhraseQuery.of(m -> m
@@ -113,14 +135,25 @@ public class BookSearcher {
         Query byAuthor = MatchQuery.of(m -> m
                 .field("author")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.8F)
+        )._toQuery();
+        Query byAuthorFuzzy = MatchQuery.of(m -> m
+                .field("author")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.08F)
         )._toQuery();
         Query byAuthorAnd = MatchQuery.of(m -> m
                 .field("author")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.8F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query byAuthorAndFuzzy = MatchQuery.of(m -> m
+                .field("author")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.08F)
                 .operator(Operator.And)
         )._toQuery();
         Query byAuthorPhrase = MatchPhraseQuery.of(m -> m
@@ -131,32 +164,54 @@ public class BookSearcher {
         Query bySeries = MatchQuery.of(m -> m
                 .field("series")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.7F)
+        )._toQuery();
+        Query bySeriesFuzzy = MatchQuery.of(m -> m
+                .field("series")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.07F)
         )._toQuery();
         Query bySeriesAnd = MatchQuery.of(m -> m
                 .field("series")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(0.7F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query bySeriesAndFuzzy = MatchQuery.of(m -> m
+                .field("series")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.07F)
                 .operator(Operator.And)
         )._toQuery();
         Query bySeriesPhrase = MatchPhraseQuery.of(m -> m
                 .field("series")
                 .query(queryTerms)
-                .boost(1.0F)
+                .boost(0.7F)
         )._toQuery();
         Query byGenre = MatchQuery.of(m -> m
                 .field("genres")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(1.3F)
+        )._toQuery();
+        Query byGenreFuzzy = MatchQuery.of(m -> m
+                .field("genres")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.13F)
         )._toQuery();
         Query byGenreAnd = MatchQuery.of(m -> m
                 .field("genres")
                 .query(queryTerms)
-                .fuzziness("2")
-                .boost(1.0F)
+                .boost(1.3F)
+                .operator(Operator.And)
+        )._toQuery();
+        Query byGenreAndFuzzy = MatchQuery.of(m -> m
+                .field("genres")
+                .query(queryTerms)
+                .fuzziness("1")
+                .boost(0.13F)
                 .operator(Operator.And)
         )._toQuery();
         SearchResponse<Book> response = esClient.search(s -> s
@@ -164,19 +219,29 @@ public class BookSearcher {
                         .query(q -> q
                                 .bool(b -> b
                                         .should(byTitle)
+                                        .should(byTitleFuzzy)
                                         .should(byTitleAnd)
+                                        .should(byTitleAndFuzzy)
                                         .should(byTitlePhrase)
                                         .should(byAbstract)
+                                        .should(byAbstractFuzzy)
                                         .should(byAbstractAnd)
+                                        .should(byAbstractAndFuzzy)
                                         .should(byAbstractPhrase)
                                         .should(byAuthor)
+                                        .should(byAuthorFuzzy)
                                         .should(byAuthorAnd)
+                                        .should(byAuthorAndFuzzy)
                                         .should(byAuthorPhrase)
                                         .should(bySeries)
+                                        .should(bySeriesFuzzy)
                                         .should(bySeriesAnd)
+                                        .should(bySeriesAndFuzzy)
                                         .should(bySeriesPhrase)
                                         .should(byGenre)
+                                        .should(byGenreFuzzy)
                                         .should(byGenreAnd)
+                                        .should(byGenreAndFuzzy)
                                 ))
                         .size(SEARCH_LIMIT),
                 Book.class);
@@ -232,6 +297,6 @@ public class BookSearcher {
      * Boosting function for given user similarity score and book rating
      */
     private double boostFunction(double simScore, double rating) {
-        return 1e6*simScore*(rating-3);
+        return 5e3*simScore*Math.pow(rating-3, 2)*Math.signum(rating-3);
     }
 }
