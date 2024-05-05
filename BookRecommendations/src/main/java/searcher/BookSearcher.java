@@ -297,6 +297,7 @@ public class BookSearcher {
      * Boosting function for given user similarity score and book rating
      */
     private double boostFunction(double simScore, double rating) {
-        return 5e3*simScore*Math.pow(rating-3, 2)*Math.signum(rating-3);
+        if (rating == 0) return 0.0;
+        return 2.5e4*simScore*Math.pow(rating-3, 2)*Math.signum(rating-3);
     }
 }
