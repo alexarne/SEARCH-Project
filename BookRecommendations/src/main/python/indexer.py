@@ -9,12 +9,12 @@ import time
 import json
 import requests
 
-USE_ELASTIC = False
+USE_ELASTIC = True
 GOODREADS_URL = "https://www.goodreads.com"
 GOODREADS_BOOKLIST_URL = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
 GOODREADS_USERLIST_URL = "https://www.goodreads.com/user/best_reviewers?country=all&duration=w"
 NUM_LIST_PAGES = 100
-FRIEND_DEPTH = 1
+FRIEND_DEPTH = 0
 ELASTIC_INSERT_URL = "https://localhost:9200/"
 RATINGS_FILE = "ratings.json"
 TEST_PROFILE1_ID = 164001102
@@ -96,15 +96,15 @@ async def indexBook(URL, session):
         # Get series
         try:
             series = soup.find("h3", class_="Text Text__title3 Text__italic Text__regular Text__subdued").find("a").text
-            log(f"series {URL}")
-            log(series)
+            # log(f"series {URL}")
+            # log(series)
             # print(series.text)
             try:
                 series = series[0:series.index("#")].strip()
             except: 
                 pass
             result["series"] = series
-            log(series)
+            # log(series)
         except:
             result["series"] = ""
 
@@ -130,6 +130,7 @@ async def indexBook(URL, session):
         abstract = mainContent.find("div", class_="DetailsLayoutRightParagraph__widthConstrained")
         if abstract is None:
             print(f"crash point abstract on {URL}")
+        print(abstract.prettify())
         for br in abstract.find_all("br"):
             br.replace_with("\n")
         result["abstr"] = abstract.text
@@ -166,6 +167,8 @@ def addBookToIndex(data):
                 id=data["id"],
                 document=data)
     # print("Indexed book " + data["title"] + " by " + data["author"])
+    # print()
+    # print(data)
     updateProgressBooks()
 
 async def fetch(session, url, loggedin=False):
@@ -221,7 +224,7 @@ async def getUserIDs(session):
     entries = soup.find("table", class_="tableList").find_all("tr")
     ids = [URLtoID(entry.find_all("td")[2].find_all("a")[0]["href"]) for entry in entries]
     # print(ids)
-    # ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
+    ids.extend([TEST_PROFILE1_ID, TEST_PROFILE2_ID, TEST_PROFILE3_ID, TEST_PROFILE4_ID])
     return ids
 
 async def indexUser(session, userID, depth):
@@ -311,7 +314,7 @@ async def indexUserRatingsPage(session, userID, pageNumber):
     # log(f"[STATUS] Processed user {userID} page {pageNumber}, took {elapsed}")
 
 def addRatingToIndex(data):
-    # ratings_list.append(data)
+    ratings_list.append(data)
     # client.index(index="ratings",
     #          document=data)
     # print(data)
@@ -392,11 +395,11 @@ async def main():
     await asyncio.gather(*tasks)
 
     # async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=30)) as session:
-    #     await indexBook("https://www.goodreads.com/book/show/20293019-manga---hentai-anime-and-manga", session)
+    #     await indexBook("https://www.goodreads.com/book/show/60690784-kiss-the-sky", session)
+    #     await indexBook("https://www.goodreads.com/book/show/50659472-a-court-of-wings-and-ruin", session)
 
     # await indexBooks()
     # await indexUsers()
-    # writeRatings()
     global numErrorBooks
     log(f"Non-existing books: {numErrorBooks}")
 
@@ -412,6 +415,8 @@ if __name__ == "__main__":
     timeEnd = time.time()
     timeElapsed = timeEnd - timeStart
     print()
+    print("writing ratings")
+    writeRatings()
     minutes = int(timeElapsed / 60)
     seconds = int(timeElapsed % 60)
     print(f"Elapsed time: {minutes}m {seconds}s")
