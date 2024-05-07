@@ -28,7 +28,7 @@ ES_INDEX=
 COOKIES_UBID_MAIN=
 COOKIES_AT_MAIN=
 ```
-`ES_FINGERPRINT` and `ES_PASSWORD` should correspond to the HTTP CA certificate SHA-256 fingerprint and elastic user password respectively from the output of the ElasticSearch set-up. `ES_INDEX` should be the name of the ElasticSearch index to store the Goodreads data. `COOKIES_UBID_MAIN` and `COOKIES_AT_MAIN` should correspond to the Goodreads account cookies.  
+`ES_FINGERPRINT` and `ES_PASSWORD` should correspond to the HTTP CA certificate SHA-256 fingerprint and elastic user password respectively from the output of the ElasticSearch set-up. `ES_INDEX` should be the name of the ElasticSearch index to store the Goodreads data. `COOKIES_UBID_MAIN` and `COOKIES_AT_MAIN` should correspond to the Goodreads account cookies "ubid-main" and "at-main", respectively (these should be extracted from a current login-session in an actual browser).  
 
 3. Run ElasticSearch on `localhost` port `9200`.
 
